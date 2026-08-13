@@ -1,0 +1,59 @@
+{
+  "product": "Hyundai Palisade",
+  "disclaimer": "Giá và thông số mang tính tham khảo cho demo.",
+  "models": {
+    "exclusive": {
+      "price": "1.469 tỷ",
+      "engine": "2.2L Diesel / 2.5L Turbo",
+      "seats": "7"
+    },
+    "prestige": {
+      "price": "1.559 tỷ",
+      "engine": "2.2L Diesel / 2.5L Turbo",
+      "seats": "6-7"
+    },
+    "caligraphy": {
+      "price": "1.560 tỷ",
+      "engine": "2.5L Turbo",
+      "seats": "6-7"
+    },
+    "hybrid": {
+      "price": "~1.65-2.1 tỷ",
+      "engine": "2.5L Hybrid (334 HP)",
+      "seats": "6-7"
+    }
+  },
+  "features": {
+    "adas": [
+      "ga tự động thích ứng",
+      "hỗ trợ giữ làn",
+      "phanh khẩn cấp tự động",
+      "cảnh báo điểm mù",
+      "camera 360°"
+    ],
+    "comfort": [
+      "ghế da Nappa sưởi/làm mát",
+      "điều hòa 3 vùng",
+      "cốp điện thông minh",
+      "panoramic sunroof"
+    ],
+    "infotainment": [
+      "màn hình kép 12.3 inch",
+      "HUD",
+      "âm thanh Bose",
+      "kết nối smartphone"
+    ]
+  },
+  "dimensions": {
+    "length": "4995-5060 mm",
+    "width": "1975-1980 mm",
+    "height": "1785-1805 mm",
+    "wheelbase": "2900-2970 mm"
+  },
+  "lifestyleHints": [
+    {
+      "tags": ["gia đình", "đà lạt", "roadtrip", "7 chỗ"],
+      "blurb": "Gia đình đông người / đi tỉnh: ưu tiên không gian, ghế sưởi/làm mát, điều hòa 3 vùng — thường hợp Prestige 7 chỗ."
+    }
+  ]
+}
