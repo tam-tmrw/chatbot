@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MarkdownMessage } from "@/app/components/MarkdownMessage";
+import { WELCOME_REPLIES, WELCOME_TEXT } from "@/lib/conversation/flow";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -10,7 +11,10 @@ const STORAGE_KEY = "vi_chat_session_id";
 export function Chat() {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [messages, setMessages] = useState<Msg[]>([
+    { role: "assistant", content: WELCOME_TEXT },
+  ]);
+  const [quickReplies, setQuickReplies] = useState<string[]>(WELCOME_REPLIES);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,11 +23,12 @@ export function Chat() {
     if (existing) setSessionId(existing);
   }, []);
 
-  async function send() {
-    const text = input.trim();
+  async function send(raw?: string) {
+    const text = (raw ?? input).trim();
     if (!text || loading) return;
     setError(null);
     setInput("");
+    setQuickReplies([]);
     setMessages((m) => [...m, { role: "user", content: text }]);
     setLoading(true);
     try {
@@ -44,6 +49,9 @@ export function Chat() {
         ...m,
         { role: "assistant", content: data.reply as string },
       ]);
+      setQuickReplies(
+        Array.isArray(data.quickReplies) ? data.quickReplies : [],
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Lỗi");
     } finally {
@@ -70,6 +78,20 @@ export function Chat() {
         {loading ? <div className="bubble assistant">...</div> : null}
       </div>
       {error ? <p className="chat-error">{error}</p> : null}
+      {quickReplies.length > 0 && !loading ? (
+        <div className="quick-replies">
+          {quickReplies.map((label) => (
+            <button
+              key={label}
+              type="button"
+              className="quick-reply"
+              onClick={() => void send(label)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <form
         className="chat-composer"
         onSubmit={(e) => {

@@ -56,6 +56,18 @@ export async function loadRecentMessages(
   return rows.slice(-limit).map(({ role, content }) => ({ role, content }));
 }
 
+export async function getSessionStage(
+  sessionId: string,
+): Promise<string | null> {
+  const db = getDb();
+  const rows = await db
+    .select({ stage: sessions.stage })
+    .from(sessions)
+    .where(eq(sessions.id, sessionId))
+    .limit(1);
+  return rows[0]?.stage ?? null;
+}
+
 export async function updateSessionStage(
   sessionId: string,
   stage: string | null,

@@ -23,6 +23,8 @@ describe.skipIf(!hasDb)("handleTurn", () => {
     expect(out.sessionId).toBeTruthy();
     expect(out.text).toContain("Ok chị");
     expect(out.leadCaptured).toBe(false);
+    expect(out.quickReplies.length).toBeGreaterThan(0);
+    expect(out.stage).toBeTruthy();
   });
 
   it("captures lead when user sends phone", async () => {
@@ -35,6 +37,72 @@ describe.skipIf(!hasDb)("handleTurn", () => {
       { llm: mockLlm },
     );
     expect(out.leadCaptured).toBe(true);
+  });
+
+  it("does not save invalid phone and re-asks", async () => {
+    const out = await handleTurn(
+      {
+        channel: "web",
+        channelUserId: "engine-user-bad-phone",
+        text: "Số mình 0123456789",
+      },
+      { llm: mockLlm },
+    );
+    expect(out.leadCaptured).toBe(false);
+    expect(out.text).toMatch(/định dạng/i);
+    expect(out.stage).toBe("capture_phone");
+    expect(out.quickReplies).toContain("Để lại SĐT sau");
+  });
+
+  it("does not save unknown region and re-asks", async () => {
+    const out = await handleTurn(
+      {
+        channel: "web",
+        channelUserId: "engine-user-bad-region",
+        text: "Mình ở xyzland",
+      },
+      { llm: mockLlm },
+    );
+    expect(out.leadCaptured).toBe(false);
+    expect(out.text).toMatch(/chưa nhận ra/i);
+    expect(out.quickReplies).toContain("Hà Nội");
+  });
+
+  it("saves name/region/finance incrementally before phone", async () => {
+    const { listLeads } = await import("@/lib/leads/service");
+    const first = await handleTurn(
+      {
+        channel: "web",
+        channelUserId: "engine-user-profile",
+        text: "Tên mình là An",
+      },
+      { llm: mockLlm },
+    );
+    expect(first.leadCaptured).toBe(false);
+    await handleTurn(
+      {
+        sessionId: first.sessionId,
+        channel: "web",
+        channelUserId: "engine-user-profile",
+        text: "Mình ở Hà Nội",
+      },
+      { llm: mockLlm },
+    );
+    await handleTurn(
+      {
+        sessionId: first.sessionId,
+        channel: "web",
+        channelUserId: "engine-user-profile",
+        text: "Trả góp",
+      },
+      { llm: mockLlm },
+    );
+    const listed = await listLeads();
+    const row = listed.find((l) => l.sessionId === first.sessionId);
+    expect(row?.name).toBe("An");
+    expect(row?.region).toBe("Hà Nội");
+    expect(row?.finance).toBe("Trả góp");
+    expect(row?.phone).toBeNull();
   });
 
   it("returns Vietnamese fallback when LLM throws", async () => {
