@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { markdownToSafeHtml } from "@/lib/chat/markdown";
+import { markdownToSafeHtml, stripMarkdownForMessenger } from "@/lib/chat/markdown";
 
 describe("markdownToSafeHtml", () => {
   it("renders italic asterisks as em", () => {
@@ -20,5 +20,15 @@ describe("markdownToSafeHtml", () => {
     expect(markdownToSafeHtml("<script>alert(1)</script>")).toBe(
       "<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>",
     );
+  });
+});
+
+describe("stripMarkdownForMessenger", () => {
+  it("removes bold/italic/code/headings for plain Messenger text", () => {
+    expect(stripMarkdownForMessenger("**Prestige** và *flex*")).toBe(
+      "Prestige và flex",
+    );
+    expect(stripMarkdownForMessenger("### Hook\n- 7 chỗ")).toContain("7 chỗ");
+    expect(stripMarkdownForMessenger("`ADAS`")).toBe("ADAS");
   });
 });
