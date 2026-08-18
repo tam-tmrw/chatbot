@@ -6,7 +6,10 @@ const SECRET_KEY = "vi_admin_secret";
 
 type Lead = {
   id: number;
-  phone: string;
+  phone: string | null;
+  name: string | null;
+  region: string | null;
+  finance: string | null;
   summary: string | null;
   createdAt: string;
 };
@@ -114,8 +117,11 @@ export default function AdminLeadsPage() {
                 className={`admin-row${selected?.id === lead.id ? " selected" : ""}`}
                 onClick={() => loadDetail(lead)}
               >
-                <strong>{lead.phone}</strong>
-                <span>{lead.summary ?? "—"}</span>
+                <strong>{lead.name ?? lead.phone ?? "Lead"}</strong>
+                <span>
+                  {[lead.phone, lead.region, lead.finance].filter(Boolean).join(" · ") ||
+                    (lead.summary ?? "—")}
+                </span>
                 <time>{formatDate(lead.createdAt)}</time>
               </button>
             </li>
@@ -127,7 +133,12 @@ export default function AdminLeadsPage() {
 
         {selected && (
           <section className="admin-detail">
-            <h2>{selected.phone}</h2>
+            <h2>{selected.name ?? selected.phone ?? "Lead"}</h2>
+            <p>
+              {[selected.phone, selected.region, selected.finance]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
             <p>{selected.summary}</p>
             <div className="admin-messages">
               {messages.map((m) => (
