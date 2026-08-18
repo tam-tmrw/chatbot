@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { ChannelName } from "@/lib/channels/types";
 import { getDb } from "@/lib/db/client";
@@ -28,6 +28,26 @@ export async function getOrCreateSession(
     .limit(1);
   if (rows.length === 0) return createSession(channel, channelUserId);
   return sessionId;
+}
+
+export async function getOrCreateSessionByChannelUser(
+  channel: ChannelName,
+  channelUserId: string,
+): Promise<string> {
+  const db = getDb();
+  const rows = await db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(
+      and(
+        eq(sessions.channel, channel),
+        eq(sessions.channelUserId, channelUserId),
+      ),
+    )
+    .orderBy(desc(sessions.updatedAt))
+    .limit(1);
+  if (rows.length) return rows[0].id;
+  return createSession(channel, channelUserId);
 }
 
 export async function appendMessage(
