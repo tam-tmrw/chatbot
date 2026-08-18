@@ -2,13 +2,13 @@ import { parseManyChatBody, toDynamicBlock } from "@/lib/channels/manychat";
 import { handleTurn } from "@/lib/conversation/engine";
 
 const NUDGE_USER =
-  "Úi MAI chưa nhận ra bạn — nhắn lại giúp mình một câu nhé!";
+  "Mình chưa nhận ra bạn — nhắn lại giúp mình một câu nhé.";
 const NUDGE_TEXT =
-  "Nhắn chữ giúp MAI nhaaa — ảnh/sticker mình chưa đọc được.";
+  "Nhắn chữ giúp mình nhé — ảnh/sticker mình chưa đọc được.";
 const NUDGE_JSON =
-  "Úi MAI chưa nhận ra tin này — nhắn lại giúp mình một câu nhé!";
+  "Mình chưa nhận ra tin này — nhắn lại giúp mình một câu nhé.";
 const FALLBACK =
-  "Úi vừa đơ một nhịp xíu 🚨 nhắn lại mình nhaaa — MAI vẫn ở đây!";
+  "Mạng hơi chậm một nhịp. Bạn nhắn lại giúp mình nhé — mình vẫn ở đây.";
 
 function unauthorized() {
   return Response.json({ error: "Unauthorized" }, { status: 401 });

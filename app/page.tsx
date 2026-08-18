@@ -5,7 +5,7 @@ export default function HomePage() {
     <main>
       <Chat />
       <p className="disclaimer">
-        Demo Virtual Influencer — giá/thông số tham khảo, không phải tổng đài
+        Demo chat với Minh — giá/thông số tham khảo, không phải tổng đài
         Hyundai.
       </p>
     </main>

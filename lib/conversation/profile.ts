@@ -96,10 +96,10 @@ export function validationReask(
   issues: Array<"phone" | "region">,
 ): string | null {
   if (issues.includes("phone")) {
-    return "SĐT này chưa đúng định dạng VN nha (10 số, đầu 03 / 05 / 07 / 08 / 09). Gửi lại giúp MAI được không?";
+    return "Số này chưa đúng định dạng VN (10 số, đầu 03 / 05 / 07 / 08 / 09). Bạn gửi lại giúp mình nhé?";
   }
   if (issues.includes("region")) {
-    return "Khu vực này MAI chưa nhận ra 💛 Chọn giúp mình tỉnh/thành nhé — vd. Hà Nội, TP.HCM, Đà Nẵng, Bình Dương, Đà Lạt…";
+    return "Mình chưa nhận ra khu vực này. Cho mình tỉnh/thành được không — vd. Hà Nội, TP.HCM, Đà Nẵng, Bình Dương?";
   }
   return null;
 }

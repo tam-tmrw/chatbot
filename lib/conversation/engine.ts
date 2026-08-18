@@ -18,7 +18,7 @@ import { getLlmProvider, type LlmProvider } from "@/lib/llm";
 import type { ChatMessage } from "@/lib/llm/types";
 
 const FALLBACK =
-  "Úi vừa đơ một nhịp xíu 🚨 nhắn lại mình nhaaa — MAI vẫn ở đây!";
+  "Mạng hơi chậm một nhịp. Bạn nhắn lại giúp mình nhé — mình vẫn ở đây.";
 
 const DEFAULT_LLM_TIMEOUT_MS = 10_000;
 

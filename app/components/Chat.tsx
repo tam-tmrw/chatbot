@@ -54,8 +54,8 @@ export function Chat() {
   return (
     <div className="chat-shell">
       <header className="chat-header">
-        <strong>MAI</strong>
-        <span>TMRW · Palisade bestie</span>
+        <strong>Minh</strong>
+        <span>TMRW · người bạn rành xe</span>
       </header>
       <div className="chat-thread">
         {messages.map((m, i) => (

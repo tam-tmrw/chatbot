@@ -51,7 +51,7 @@ describe.skipIf(!hasDb)("handleTurn", () => {
       },
       { llm: failingLlm },
     );
-    expect(out.text).toContain("đơ một nhịp");
+    expect(out.text).toContain("chậm một nhịp");
     expect(out.leadCaptured).toBe(false);
   });
 
@@ -69,7 +69,7 @@ describe.skipIf(!hasDb)("handleTurn", () => {
       },
       { llm: failingLlm },
     );
-    expect(out.text).toContain("đơ một nhịp");
+    expect(out.text).toContain("chậm một nhịp");
     expect(out.leadCaptured).toBe(true);
   });
 
@@ -157,7 +157,7 @@ describe.skipIf(!hasDb)("handleTurn", () => {
       },
       { llm: slow, llmTimeoutMs: 20 },
     );
-    expect(out.text).toContain("đơ một nhịp");
+    expect(out.text).toContain("chậm một nhịp");
     expect(out.text).not.toContain("should not appear");
   });
 });

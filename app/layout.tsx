@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MAI — Virtual Influencer Chat",
+  title: "Minh — Virtual Influencer Chat",
   description:
-    "Demo chat với MAI (TMRW) về Hyundai Palisade. Giá/thông số tham khảo.",
+    "Demo chat với Minh (TMRW) về Hyundai Palisade. Giá/thông số tham khảo.",
 };
 
 export default function RootLayout({
