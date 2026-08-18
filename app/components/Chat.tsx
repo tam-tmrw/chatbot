@@ -10,6 +10,15 @@ const STORAGE_KEY = "vi_chat_session_id";
 const WELCOME =
   "Mình là Minh. Bạn đang tìm Palisade cho gia đình, đi làm, hay đi tỉnh?";
 
+// ponytail: web-only think time — bump here; later: env / per-channel config
+const REPLY_DELAY_MS = 1000;
+
+function waitAtLeast(startedAt: number, minMs: number): Promise<void> {
+  const left = minMs - (Date.now() - startedAt);
+  if (left <= 0) return Promise.resolve();
+  return new Promise((r) => setTimeout(r, left));
+}
+
 export function Chat() {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [input, setInput] = useState("");
@@ -31,6 +40,7 @@ export function Chat() {
     setInput("");
     setMessages((m) => [...m, { role: "user", content: text }]);
     setLoading(true);
+    const startedAt = Date.now();
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -43,6 +53,7 @@ export function Chat() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Lỗi gửi tin");
+      await waitAtLeast(startedAt, REPLY_DELAY_MS);
       localStorage.setItem(STORAGE_KEY, data.sessionId);
       setSessionId(data.sessionId);
       setMessages((m) => [
@@ -72,7 +83,13 @@ export function Chat() {
             )}
           </div>
         ))}
-        {loading ? <div className="bubble assistant">...</div> : null}
+        {loading ? (
+          <div className="bubble assistant typing" aria-label="Minh đang soạn tin">
+            <span className="typing-dot" />
+            <span className="typing-dot" />
+            <span className="typing-dot" />
+          </div>
+        ) : null}
       </div>
       {error ? <p className="chat-error">{error}</p> : null}
       <form
