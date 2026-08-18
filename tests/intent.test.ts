@@ -39,4 +39,18 @@ describe("looksLikeInvalidPhone", () => {
     expect(looksLikeInvalidPhone("Để lại SĐT sau")).toBe(false);
     expect(looksLikeInvalidPhone("Palisade có gì hay?")).toBe(false);
   });
+
+  it("does not hijack price/date messages with scattered digits", () => {
+    expect(
+      looksLikeInvalidPhone(
+        "Prestige 1.559 tỷ so với Exclusive 2.099 tỷ chênh nhiều không?",
+      ),
+    ).toBe(false);
+    expect(
+      looksLikeInvalidPhone("Mình xem ngày 18/08/2026 lái thử được không?"),
+    ).toBe(false);
+    expect(looksLikeInvalidPhone("0123456789")).toBe(true);
+    expect(looksLikeInvalidPhone("Số mình 090123")).toBe(true);
+    expect(looksLikeInvalidPhone("0901234567")).toBe(false);
+  });
 });

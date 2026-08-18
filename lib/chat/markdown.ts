@@ -90,3 +90,16 @@ export function markdownToSafeHtml(src: string): string {
 
   return out.join("");
 }
+
+export function stripMarkdownForMessenger(src: string): string {
+  return src
+    .replace(/\r\n/g, "\n")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1$2")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^#{1,3}\s+/gm, "")
+    .replace(/^[-*]\s+/gm, "• ")
+    .replace(/^\d+\.\s+/gm, "")
+    .trim();
+}

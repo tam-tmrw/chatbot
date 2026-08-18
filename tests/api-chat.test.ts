@@ -5,8 +5,6 @@ vi.mock("@/lib/conversation/engine", () => ({
     sessionId: "abc",
     text: "hello",
     leadCaptured: false,
-    quickReplies: ["Đăng ký lái thử"],
-    stage: "qualify",
   })),
 }));
 
@@ -52,8 +50,6 @@ describe("POST /api/chat", () => {
       sessionId: "abc",
       reply: "hello",
       leadCaptured: false,
-      quickReplies: ["Đăng ký lái thử"],
-      stage: "qualify",
     });
   });
 });

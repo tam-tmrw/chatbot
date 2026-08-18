@@ -23,8 +23,6 @@ describe.skipIf(!hasDb)("handleTurn", () => {
     expect(out.sessionId).toBeTruthy();
     expect(out.text).toContain("Ok chị");
     expect(out.leadCaptured).toBe(false);
-    expect(out.quickReplies.length).toBeGreaterThan(0);
-    expect(out.stage).toBeTruthy();
   });
 
   it("captures lead when user sends phone", async () => {
@@ -39,36 +37,63 @@ describe.skipIf(!hasDb)("handleTurn", () => {
     expect(out.leadCaptured).toBe(true);
   });
 
-  it("does not save invalid phone and re-asks", async () => {
+  it("returns Vietnamese fallback when LLM throws", async () => {
+    const failingLlm: LlmProvider = {
+      async chat() {
+        throw new Error("LLM unavailable");
+      },
+    };
     const out = await handleTurn(
       {
         channel: "web",
-        channelUserId: "engine-user-bad-phone",
-        text: "Số mình 0123456789",
+        channelUserId: "engine-user-fallback",
+        text: "Palisade có gì hay?",
       },
-      { llm: mockLlm },
+      { llm: failingLlm },
     );
+    expect(out.text).toContain("chậm một nhịp");
     expect(out.leadCaptured).toBe(false);
-    expect(out.text).toMatch(/định dạng/i);
-    expect(out.stage).toBe("capture_phone");
-    expect(out.quickReplies).toContain("Để lại SĐT sau");
   });
 
-  it("does not save unknown region and re-asks", async () => {
+  it("still captures lead when LLM throws but phone present", async () => {
+    const failingLlm: LlmProvider = {
+      async chat() {
+        throw new Error("LLM unavailable");
+      },
+    };
     const out = await handleTurn(
       {
         channel: "web",
-        channelUserId: "engine-user-bad-region",
-        text: "Mình ở xyzland",
+        channelUserId: "engine-user-fallback-phone",
+        text: "Số mình 0901234567",
+      },
+      { llm: failingLlm },
+    );
+    expect(out.text).toContain("chậm một nhịp");
+    expect(out.leadCaptured).toBe(true);
+  });
+
+  it("reuses messenger session across turns", async () => {
+    const first = await handleTurn(
+      {
+        channel: "messenger",
+        channelUserId: "engine-mc-same",
+        text: "hello",
       },
       { llm: mockLlm },
     );
-    expect(out.leadCaptured).toBe(false);
-    expect(out.text).toMatch(/chưa nhận ra/i);
-    expect(out.quickReplies).toContain("Hà Nội");
+    const second = await handleTurn(
+      {
+        channel: "messenger",
+        channelUserId: "engine-mc-same",
+        text: "ủa sao vậy",
+      },
+      { llm: mockLlm },
+    );
+    expect(second.sessionId).toBe(first.sessionId);
   });
 
-  it("saves name/region/finance incrementally before phone", async () => {
+  it("saves name/region/finance before phone", async () => {
     const { listLeads } = await import("@/lib/leads/service");
     const first = await handleTurn(
       {
@@ -97,47 +122,55 @@ describe.skipIf(!hasDb)("handleTurn", () => {
       },
       { llm: mockLlm },
     );
-    const listed = await listLeads();
-    const row = listed.find((l) => l.sessionId === first.sessionId);
+    const row = (await listLeads()).find((l) => l.sessionId === first.sessionId);
     expect(row?.name).toBe("An");
     expect(row?.region).toBe("Hà Nội");
     expect(row?.finance).toBe("Trả góp");
     expect(row?.phone).toBeNull();
   });
 
-  it("returns Vietnamese fallback when LLM throws", async () => {
-    const failingLlm: LlmProvider = {
-      async chat() {
-        throw new Error("LLM unavailable");
-      },
-    };
+  it("does not save invalid phone and re-asks", async () => {
     const out = await handleTurn(
       {
         channel: "web",
-        channelUserId: "engine-user-fallback",
-        text: "Palisade có gì hay?",
+        channelUserId: "engine-user-bad-phone",
+        text: "Số mình 0123456789",
       },
-      { llm: failingLlm },
+      { llm: mockLlm },
     );
-    expect(out.text).toContain("đơ một nhịp");
     expect(out.leadCaptured).toBe(false);
+    expect(out.text).toMatch(/định dạng/i);
   });
 
-  it("still captures lead when LLM throws but phone present", async () => {
-    const failingLlm: LlmProvider = {
+  it("does not save unknown region and re-asks", async () => {
+    const out = await handleTurn(
+      {
+        channel: "web",
+        channelUserId: "engine-user-bad-region",
+        text: "Mình ở xyzland",
+      },
+      { llm: mockLlm },
+    );
+    expect(out.leadCaptured).toBe(false);
+    expect(out.text).toMatch(/chưa nhận ra/i);
+  });
+
+  it("falls back when LLM exceeds timeout", async () => {
+    const slow: LlmProvider = {
       async chat() {
-        throw new Error("LLM unavailable");
+        await new Promise((r) => setTimeout(r, 200));
+        return "should not appear";
       },
     };
     const out = await handleTurn(
       {
         channel: "web",
-        channelUserId: "engine-user-fallback-phone",
-        text: "Số mình 0901234567",
+        channelUserId: "engine-user-timeout",
+        text: "hello",
       },
-      { llm: failingLlm },
+      { llm: slow, llmTimeoutMs: 20 },
     );
-    expect(out.text).toContain("đơ một nhịp");
-    expect(out.leadCaptured).toBe(true);
+    expect(out.text).toContain("chậm một nhịp");
+    expect(out.text).not.toContain("should not appear");
   });
 });

@@ -1,6 +1,8 @@
 # Messenger integration — next steps
 
-The v1 demo uses web chat only. This stub proves the channel boundary; wiring live Facebook Messenger is a follow-on task.
+**Chosen live FB path (2026-08-18):** ManyChat gateway — see `docs/manychat-gateway-design.md`. This stub remains for a possible later Meta webhook; it is **not** the v1 Facebook go-live.
+
+The v1 demo uses web chat only. This stub proves the channel boundary; wiring live Facebook Messenger via Meta Send API is a follow-on task (not ManyChat).
 
 ## Prerequisites
 

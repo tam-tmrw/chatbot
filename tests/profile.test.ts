@@ -15,7 +15,6 @@ describe("extractName", () => {
     expect(extractName("Tên mình là Nguyễn An")).toBe("Nguyễn An");
     expect(extractName("Mình là Minh")).toBe("Minh");
   });
-
   it("ignores non-names", () => {
     expect(extractName("Mình là người thích xe")).toBeNull();
   });
@@ -35,13 +34,18 @@ describe("extractRegion + extractFinance", () => {
     expect(extractRegion("Hay đi tỉnh / Đà Lạt")).toBeNull();
   });
 
-  it("rejects unknown địa chỉ and asks again", () => {
+  it("rejects unknown địa chỉ", () => {
     expect(extractRegion("Mình ở xyzland")).toBeNull();
     expect(looksLikeInvalidRegion("Mình ở xyzland", false)).toBe(true);
     expect(looksLikeInvalidRegion("Bình Dương", true)).toBe(false);
     expect(extractRegion("Bình Dương")).toBe("Bình Dương");
-    expect(validationReask(["region"])).toMatch(/chưa nhận ra/i);
     expect(validationReask(["phone"])).toMatch(/định dạng/i);
+    expect(validationReask(["region"])).toMatch(/chưa nhận ra/i);
+  });
+
+  it("requires a location cue for invalid-region", () => {
+    expect(looksLikeInvalidRegion("Xe này đẹp quá", true)).toBe(false);
+    expect(looksLikeInvalidRegion("Mình ở xyzland", false)).toBe(true);
   });
 });
 

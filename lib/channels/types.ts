@@ -11,6 +11,4 @@ export type OutgoingMessage = {
   sessionId: string;
   text: string;
   leadCaptured: boolean;
-  quickReplies: string[];
-  stage: string;
 };

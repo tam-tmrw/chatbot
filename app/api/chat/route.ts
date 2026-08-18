@@ -20,8 +20,6 @@ export async function POST(req: Request) {
       sessionId: out.sessionId,
       reply: out.text,
       leadCaptured: out.leadCaptured,
-      quickReplies: out.quickReplies,
-      stage: out.stage,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Server error";

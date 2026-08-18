@@ -7,6 +7,16 @@ function keep(next: string | null | undefined, prev: string | null | undefined) 
   return next || prev || null;
 }
 
+export async function getLeadForSession(sessionId: string) {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(leads)
+    .where(eq(leads.sessionId, sessionId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export async function upsertLeadForSession(args: {
   sessionId: string;
   phone?: string | null;

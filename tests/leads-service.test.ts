@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getOrCreateSession, appendMessage } from "@/lib/conversation/session";
 import {
+  getLeadForSession,
   getLeadWithMessages,
   listLeads,
   upsertLeadForSession,
@@ -41,11 +42,20 @@ describe.skipIf(!hasDb)("leads service", () => {
       ),
     ).toBe(true);
 
-    const detail = await getLeadWithMessages(first.id);
+    expect(
+      await upsertLeadForSession({ sessionId, summary: "noop" }),
+    ).toBeNull();
+
+    const detail = await getLeadWithMessages(first!.id);
     expect(detail?.messages.length).toBeGreaterThan(0);
 
     await expect(
-      notifyLead({ id: first.id, phone: "0912345678", sessionId }),
+      notifyLead({ id: first!.id, phone: "0912345678", sessionId }),
     ).resolves.toBeUndefined();
+
+    const bySession = await getLeadForSession(sessionId);
+    expect(bySession?.name).toBe("An");
+    expect(bySession?.id).toBe(first!.id);
+    expect(await getLeadForSession("00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 });

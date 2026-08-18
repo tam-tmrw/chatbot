@@ -2,19 +2,29 @@
 
 import { useEffect, useState } from "react";
 import { MarkdownMessage } from "@/app/components/MarkdownMessage";
-import { WELCOME_REPLIES, WELCOME_TEXT } from "@/lib/conversation/flow";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
 const STORAGE_KEY = "vi_chat_session_id";
 
+const WELCOME =
+  "Mình là Minh. Bạn đang tìm Palisade cho gia đình, đi làm, hay đi tỉnh?";
+
+// ponytail: web-only think time — bump here; later: env / per-channel config
+const REPLY_DELAY_MS = 1000;
+
+function waitAtLeast(startedAt: number, minMs: number): Promise<void> {
+  const left = minMs - (Date.now() - startedAt);
+  if (left <= 0) return Promise.resolve();
+  return new Promise((r) => setTimeout(r, left));
+}
+
 export function Chat() {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: WELCOME_TEXT },
+    { role: "assistant", content: WELCOME },
   ]);
-  const [quickReplies, setQuickReplies] = useState<string[]>(WELCOME_REPLIES);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,14 +33,14 @@ export function Chat() {
     if (existing) setSessionId(existing);
   }, []);
 
-  async function send(raw?: string) {
-    const text = (raw ?? input).trim();
+  async function send() {
+    const text = input.trim();
     if (!text || loading) return;
     setError(null);
     setInput("");
-    setQuickReplies([]);
     setMessages((m) => [...m, { role: "user", content: text }]);
     setLoading(true);
+    const startedAt = Date.now();
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -43,15 +53,13 @@ export function Chat() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Lỗi gửi tin");
+      await waitAtLeast(startedAt, REPLY_DELAY_MS);
       localStorage.setItem(STORAGE_KEY, data.sessionId);
       setSessionId(data.sessionId);
       setMessages((m) => [
         ...m,
         { role: "assistant", content: data.reply as string },
       ]);
-      setQuickReplies(
-        Array.isArray(data.quickReplies) ? data.quickReplies : [],
-      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Lỗi");
     } finally {
@@ -62,8 +70,8 @@ export function Chat() {
   return (
     <div className="chat-shell">
       <header className="chat-header">
-        <strong>MAI</strong>
-        <span>TMRW · Palisade bestie</span>
+        <strong>Minh</strong>
+        <span>TMRW · người bạn rành xe</span>
       </header>
       <div className="chat-thread">
         {messages.map((m, i) => (
@@ -75,23 +83,15 @@ export function Chat() {
             )}
           </div>
         ))}
-        {loading ? <div className="bubble assistant">...</div> : null}
+        {loading ? (
+          <div className="bubble assistant typing" aria-label="Minh đang soạn tin">
+            <span className="typing-dot" />
+            <span className="typing-dot" />
+            <span className="typing-dot" />
+          </div>
+        ) : null}
       </div>
       {error ? <p className="chat-error">{error}</p> : null}
-      {quickReplies.length > 0 && !loading ? (
-        <div className="quick-replies">
-          {quickReplies.map((label) => (
-            <button
-              key={label}
-              type="button"
-              className="quick-reply"
-              onClick={() => void send(label)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      ) : null}
       <form
         className="chat-composer"
         onSubmit={(e) => {

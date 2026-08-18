@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { ChannelName } from "@/lib/channels/types";
 import { getDb } from "@/lib/db/client";
@@ -30,6 +30,26 @@ export async function getOrCreateSession(
   return sessionId;
 }
 
+export async function getOrCreateSessionByChannelUser(
+  channel: ChannelName,
+  channelUserId: string,
+): Promise<string> {
+  const db = getDb();
+  const rows = await db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(
+      and(
+        eq(sessions.channel, channel),
+        eq(sessions.channelUserId, channelUserId),
+      ),
+    )
+    .orderBy(desc(sessions.updatedAt))
+    .limit(1);
+  if (rows.length) return rows[0].id;
+  return createSession(channel, channelUserId);
+}
+
 export async function appendMessage(
   sessionId: string,
   role: "user" | "assistant" | "system",
@@ -54,24 +74,4 @@ export async function loadRecentMessages(
     .where(eq(messages.sessionId, sessionId))
     .orderBy(asc(messages.id));
   return rows.slice(-limit).map(({ role, content }) => ({ role, content }));
-}
-
-export async function getSessionStage(
-  sessionId: string,
-): Promise<string | null> {
-  const db = getDb();
-  const rows = await db
-    .select({ stage: sessions.stage })
-    .from(sessions)
-    .where(eq(sessions.id, sessionId))
-    .limit(1);
-  return rows[0]?.stage ?? null;
-}
-
-export async function updateSessionStage(
-  sessionId: string,
-  stage: string | null,
-): Promise<void> {
-  const db = getDb();
-  await db.update(sessions).set({ stage }).where(eq(sessions.id, sessionId));
 }
