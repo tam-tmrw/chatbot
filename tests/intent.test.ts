@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { extractVnPhone, normalizeVnPhone } from "@/lib/conversation/intent";
+import {
+  extractVnPhone,
+  looksLikeInvalidPhone,
+  normalizeVnPhone,
+} from "@/lib/conversation/intent";
 
 describe("normalizeVnPhone", () => {
   it("normalizes +84 to leading 0", () => {
@@ -24,5 +28,14 @@ describe("extractVnPhone", () => {
 
   it("returns null when no phone", () => {
     expect(extractVnPhone("Xe này bao nhiêu vậy?")).toBeNull();
+  });
+});
+
+describe("looksLikeInvalidPhone", () => {
+  it("flags short or illegal prefixes, not valid VN mobiles", () => {
+    expect(looksLikeInvalidPhone("Số mình 090123")).toBe(true);
+    expect(looksLikeInvalidPhone("0123456789")).toBe(true);
+    expect(looksLikeInvalidPhone("0901234567")).toBe(false);
+    expect(looksLikeInvalidPhone("Palisade có gì hay?")).toBe(false);
   });
 });

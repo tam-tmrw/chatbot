@@ -22,3 +22,14 @@ export function extractVnPhone(text: string): string | null {
   }
   return null;
 }
+
+export function looksLikeInvalidPhone(text: string): boolean {
+  if (extractVnPhone(text)) return false;
+  const digits = text.replace(/\D/g, "");
+  if (digits.length >= 8) return true;
+  return (
+    /(?:sđt|số\s*(?:điện\s*)?(?:thoại|dt|mình|em|anh|chị)?|\bphone\b)/i.test(
+      text,
+    ) && /\d{6,}/.test(text)
+  );
+}
