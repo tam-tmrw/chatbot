@@ -36,6 +36,7 @@ describe("looksLikeInvalidPhone", () => {
     expect(looksLikeInvalidPhone("Số mình 090123")).toBe(true);
     expect(looksLikeInvalidPhone("0123456789")).toBe(true);
     expect(looksLikeInvalidPhone("0901234567")).toBe(false);
+    expect(looksLikeInvalidPhone("Để lại SĐT sau")).toBe(false);
     expect(looksLikeInvalidPhone("Palisade có gì hay?")).toBe(false);
   });
 

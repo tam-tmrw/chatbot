@@ -75,11 +75,3 @@ export async function loadRecentMessages(
     .orderBy(asc(messages.id));
   return rows.slice(-limit).map(({ role, content }) => ({ role, content }));
 }
-
-export async function updateSessionStage(
-  sessionId: string,
-  stage: string | null,
-): Promise<void> {
-  const db = getDb();
-  await db.update(sessions).set({ stage }).where(eq(sessions.id, sessionId));
-}

@@ -119,8 +119,9 @@ export default function AdminLeadsPage() {
               >
                 <strong>{lead.name ?? lead.phone ?? "Lead"}</strong>
                 <span>
-                  {[lead.phone, lead.region, lead.finance].filter(Boolean).join(" · ") ||
-                    (lead.summary ?? "—")}
+                  {[lead.phone, lead.region, lead.finance]
+                    .filter(Boolean)
+                    .join(" · ") || (lead.summary ?? "—")}
                 </span>
                 <time>{formatDate(lead.createdAt)}</time>
               </button>

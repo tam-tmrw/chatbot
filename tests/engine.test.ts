@@ -142,6 +142,19 @@ describe.skipIf(!hasDb)("handleTurn", () => {
     expect(out.text).toMatch(/định dạng/i);
   });
 
+  it("does not save unknown region and re-asks", async () => {
+    const out = await handleTurn(
+      {
+        channel: "web",
+        channelUserId: "engine-user-bad-region",
+        text: "Mình ở xyzland",
+      },
+      { llm: mockLlm },
+    );
+    expect(out.leadCaptured).toBe(false);
+    expect(out.text).toMatch(/chưa nhận ra/i);
+  });
+
   it("falls back when LLM exceeds timeout", async () => {
     const slow: LlmProvider = {
       async chat() {

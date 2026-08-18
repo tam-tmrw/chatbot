@@ -25,6 +25,7 @@ export function extractVnPhone(text: string): string | null {
 
 export function looksLikeInvalidPhone(text: string): boolean {
   if (extractVnPhone(text)) return false;
+  if (/để lại sđt sau/i.test(text.trim())) return false;
   // ponytail: contiguous run only — do not concatenate digits across the message
   if (/\d{8,11}/.test(text)) return true;
   return (

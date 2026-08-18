@@ -7,10 +7,15 @@ type Msg = { role: "user" | "assistant"; content: string };
 
 const STORAGE_KEY = "vi_chat_session_id";
 
+const WELCOME =
+  "Mình là Minh. Bạn đang tìm Palisade cho gia đình, đi làm, hay đi tỉnh?";
+
 export function Chat() {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [messages, setMessages] = useState<Msg[]>([
+    { role: "assistant", content: WELCOME },
+  ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

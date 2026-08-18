@@ -6,6 +6,7 @@ describe("extractProvince", () => {
     expect(extractProvince("TP. Hồ Chí Minh")).toBe("TP. Hồ Chí Minh");
     expect(extractProvince("Mình ở Hà Nội")).toBe("Hà Nội");
     expect(extractProvince("binh duong")).toBe("Bình Dương");
+    expect(extractProvince("Đà Lạt")).toBe("Đà Lạt");
     expect(extractProvince("Palisade 7 chỗ")).toBeNull();
   });
 });
