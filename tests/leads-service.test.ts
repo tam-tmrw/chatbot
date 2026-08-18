@@ -15,28 +15,41 @@ describe.skipIf(!hasDb)("leads service", () => {
     await appendMessage(sessionId, "user", "0901234567");
     const first = await upsertLeadForSession({
       sessionId,
-      phone: "0901234567",
-      summary: "quan tâm Prestige",
+      name: "An",
+      summary: "Lead Palisade · An",
     });
     const second = await upsertLeadForSession({
       sessionId,
       phone: "0912345678",
-      summary: "đổi số",
+      region: "Hà Nội",
+      finance: "Trả góp",
+      summary: "Lead Palisade · An · Hà Nội · Trả góp · 0912345678",
     });
-    expect(first.created).toBe(true);
-    expect(second.created).toBe(false);
-    expect(second.id).toBe(first.id);
+    expect(first?.created).toBe(true);
+    expect(second?.created).toBe(false);
+    expect(second?.id).toBe(first?.id);
 
     const listed = await listLeads();
-    expect(listed.some((l) => l.id === first.id && l.phone === "0912345678")).toBe(
-      true,
-    );
+    expect(
+      listed.some(
+        (l) =>
+          l.id === first!.id &&
+          l.phone === "0912345678" &&
+          l.name === "An" &&
+          l.region === "Hà Nội" &&
+          l.finance === "Trả góp",
+      ),
+    ).toBe(true);
 
-    const detail = await getLeadWithMessages(first.id);
+    expect(
+      await upsertLeadForSession({ sessionId, summary: "noop" }),
+    ).toBeNull();
+
+    const detail = await getLeadWithMessages(first!.id);
     expect(detail?.messages.length).toBeGreaterThan(0);
 
     await expect(
-      notifyLead({ id: first.id, phone: "0912345678", sessionId }),
+      notifyLead({ id: first!.id, phone: "0912345678", sessionId }),
     ).resolves.toBeUndefined();
   });
 });

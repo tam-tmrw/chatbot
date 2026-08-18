@@ -32,7 +32,10 @@ export const leads = mysqlTable("leads", {
   sessionId: varchar("session_id", { length: 36 })
     .notNull()
     .references(() => sessions.id),
-  phone: varchar("phone", { length: 20 }).notNull(),
+  phone: varchar("phone", { length: 20 }),
+  name: varchar("name", { length: 120 }),
+  region: varchar("region", { length: 80 }),
+  finance: varchar("finance", { length: 120 }),
   summary: text("summary"),
   meta: json("meta"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

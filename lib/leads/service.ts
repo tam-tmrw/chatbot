@@ -3,12 +3,21 @@ import { getDb } from "@/lib/db/client";
 import { leads, messages } from "@/lib/db/schema";
 import { notifyLead } from "@/lib/leads/notify";
 
+function keep(next: string | null | undefined, prev: string | null | undefined) {
+  return next || prev || null;
+}
+
 export async function upsertLeadForSession(args: {
   sessionId: string;
-  phone: string;
+  phone?: string | null;
+  name?: string | null;
+  region?: string | null;
+  finance?: string | null;
   summary: string;
   meta?: Record<string, unknown>;
-}): Promise<{ id: number; created: boolean }> {
+}): Promise<{ id: number; created: boolean } | null> {
+  if (!args.phone && !args.name && !args.region && !args.finance) return null;
+
   const db = getDb();
   const existing = await db
     .select()
@@ -19,22 +28,33 @@ export async function upsertLeadForSession(args: {
   if (existing.length === 0) {
     const result = await db.insert(leads).values({
       sessionId: args.sessionId,
-      phone: args.phone,
+      phone: args.phone ?? null,
+      name: args.name ?? null,
+      region: args.region ?? null,
+      finance: args.finance ?? null,
       summary: args.summary,
       meta: args.meta ?? null,
     });
     const id = Number(result[0].insertId);
-    await notifyLead({ id, phone: args.phone, sessionId: args.sessionId });
+    await notifyLead({
+      id,
+      phone: args.phone ?? null,
+      sessionId: args.sessionId,
+    });
     return { id, created: true };
   }
 
-  const id = existing[0].id;
+  const prev = existing[0];
+  const id = prev.id;
   await db
     .update(leads)
     .set({
-      phone: args.phone,
+      phone: keep(args.phone, prev.phone),
+      name: keep(args.name, prev.name),
+      region: keep(args.region, prev.region),
+      finance: keep(args.finance, prev.finance),
       summary: args.summary,
-      meta: args.meta ?? existing[0].meta,
+      meta: args.meta ?? prev.meta,
     })
     .where(eq(leads.id, id));
   return { id, created: false };
