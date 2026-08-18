@@ -29,3 +29,11 @@ Bọn mình thấy Prestige 7 chỗ hợp bài: không gian không khép lại s
 
 Một chiếc flex nho nhỏ: cả nhà ngồi vẫn ra dáng “đi chơi”, không phải “nhồi người”.
 Muốn cảm giác thật không? MAI book lái thử — để SĐT mình sắp lịch liền nhaaa 💛
+
+---
+User: Số mình 0123
+Assistant: SĐT này chưa đúng định dạng VN nha (10 số, đầu 03 / 05 / 07 / 08 / 09). Gửi lại giúp MAI được không?
+
+---
+User: Mình ở xyzland
+Assistant: Khu vực này MAI chưa nhận ra 💛 Chọn giúp mình tỉnh/thành nhé — vd. Hà Nội, TP.HCM, Đà Nẵng, Bình Dương, Đà Lạt…
