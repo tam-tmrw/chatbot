@@ -33,6 +33,11 @@ describe("extractRegion + extractFinance", () => {
     expect(validationReask(["phone"])).toMatch(/định dạng/i);
     expect(validationReask(["region"])).toMatch(/chưa nhận ra/i);
   });
+
+  it("requires a location cue for invalid-region", () => {
+    expect(looksLikeInvalidRegion("Xe này đẹp quá", true)).toBe(false);
+    expect(looksLikeInvalidRegion("Mình ở xyzland", false)).toBe(true);
+  });
 });
 
 describe("extractLeadProfile", () => {

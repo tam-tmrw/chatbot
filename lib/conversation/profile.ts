@@ -75,25 +75,11 @@ export function extractRegion(text: string): string | null {
 
 export function looksLikeInvalidRegion(
   text: string,
-  expectingRegion: boolean,
+  _expectingRegion: boolean,
 ): boolean {
   if (extractRegion(text)) return false;
-  const t = text.trim().toLowerCase();
-  if (
-    /hay đi|đi tỉnh|đi phố|đi làm|lái thử|gia đình|palisade|giá|ưu đãi|trả góp|tiền mặt|ngân sách|để lại sđt|tên mình|mình là/.test(
-      t,
-    )
-  ) {
-    return false;
-  }
-  if (LOCATION_CUE.test(text)) return true;
-  if (!expectingRegion) return false;
-  if (/^(ok|ừ|uh|ừm|dạ|vâng|không|để sau|sau)$/i.test(t)) return false;
-  if (/\d{6,}/.test(text)) return false;
-  return (
-    /^[A-Za-zÀ-ỹĐđ.\s-]{2,40}$/.test(text.trim()) &&
-    text.trim().split(/\s+/).length <= 6
-  );
+  // ponytail: location cue required — bare unknown tokens fall through to LLM re-ask
+  return LOCATION_CUE.test(text);
 }
 
 export function validationIssues(

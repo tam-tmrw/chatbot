@@ -13,7 +13,7 @@ import {
   getOrCreateSessionByChannelUser,
   loadRecentMessages,
 } from "@/lib/conversation/session";
-import { upsertLeadForSession } from "@/lib/leads/service";
+import { getLeadForSession, upsertLeadForSession } from "@/lib/leads/service";
 import { getLlmProvider, type LlmProvider } from "@/lib/llm";
 import type { ChatMessage } from "@/lib/llm/types";
 
@@ -59,9 +59,18 @@ export async function handleTurn(
   const userTexts = history
     .filter((m) => m.role === "user")
     .map((m) => m.content);
-  const profile = extractLeadProfile(userTexts);
+  const extracted = extractLeadProfile(userTexts);
+  const stored = await getLeadForSession(sessionId);
+  const profile = {
+    name: extracted.name ?? stored?.name ?? null,
+    region: extracted.region ?? stored?.region ?? null,
+    finance: extracted.finance ?? stored?.finance ?? null,
+    phone: extracted.phone ?? stored?.phone ?? null,
+  };
   const missing = missingLeadFields(profile);
-  const issues = validationIssues(input.text, missing[0] === "region");
+  let issues = validationIssues(input.text, missing[0] === "region");
+  if (profile.phone) issues = issues.filter((i) => i !== "phone");
+  if (profile.region) issues = issues.filter((i) => i !== "region");
 
   if (profile.phone || profile.name || profile.region || profile.finance) {
     await upsertLeadForSession({
