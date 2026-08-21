@@ -7,9 +7,6 @@ type Msg = { role: "user" | "assistant"; content: string };
 
 const STORAGE_KEY = "vi_chat_session_id";
 
-const WELCOME =
-  "Hi bạn, Minh đâyyy. Bạn đang quan tâm vấn đề gì thì cứ share với Minh nghen.";
-
 // ponytail: web-only think time — bump here; later: env / per-channel config
 const REPLY_DELAY_MS = 1000;
 
@@ -22,9 +19,7 @@ function waitAtLeast(startedAt: number, minMs: number): Promise<void> {
 export function Chat() {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: WELCOME },
-  ]);
+  const [messages, setMessages] = useState<Msg[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
