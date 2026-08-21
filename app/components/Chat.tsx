@@ -8,7 +8,7 @@ type Msg = { role: "user" | "assistant"; content: string };
 const STORAGE_KEY = "vi_chat_session_id";
 
 const WELCOME =
-  "Mình là Minh. Bạn đang tìm Palisade cho gia đình, đi làm, hay đi tỉnh?";
+  "Hi bạn, Minh đâyyy. Bạn đang quan tâm vấn đề gì thì cứ share với Minh nghen.";
 
 // ponytail: web-only think time — bump here; later: env / per-channel config
 const REPLY_DELAY_MS = 1000;
