@@ -55,11 +55,47 @@ main {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
+.chat-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chat-header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .chat-header strong {
   font-size: 1.1rem;
 }
 
 .chat-header span {
+  font-size: 0.8rem;
+  color: #65676b;
+}
+
+.chat-new {
+  flex-shrink: 0;
+  border: 1px solid #ccd0d5;
+  background: #fff;
+  color: #050505;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.chat-new:hover {
+  background: #f0f2f5;
+}
+
+.chat-load-older {
+  margin: 0;
+  text-align: center;
   font-size: 0.8rem;
   color: #65676b;
 }
@@ -234,6 +270,33 @@ main {
   text-align: center;
   color: #65676b;
   background: var(--background);
+}
+
+.session-missing {
+  max-width: 28rem;
+  margin: 4rem auto;
+  padding: 0 1.25rem;
+  text-align: center;
+}
+
+.session-missing h1 {
+  font-size: 1.25rem;
+  margin: 0 0 0.5rem;
+}
+
+.session-missing p {
+  margin: 0 0 1.25rem;
+  color: #65676b;
+}
+
+.session-missing-cta {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 20px;
+  background: var(--user-bubble);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
 }
 
 .admin-shell {

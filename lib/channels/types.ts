@@ -9,7 +9,7 @@ export type IncomingMessage = {
 
 export type OutgoingMessage = {
   sessionId: string;
-  /** Joined bubbles — for DB history and single-string consumers */
+  /** Joined bubbles — single-string consumers (API `reply`, notify); DB stores each bubble as its own row */
   text: string;
   /** 1–3 segments for web stagger / ManyChat multi-message */
   texts: string[];

@@ -49,6 +49,14 @@ describe.skipIf(!hasDb)("handleTurn", () => {
     ]);
     expect(out.text).toContain("Đoạn một");
     expect(out.text).toContain("Đoạn hai");
+
+    const { loadRecentMessages } = await import("@/lib/conversation/session");
+    const msgs = await loadRecentMessages(out.sessionId, 24);
+    const assistant = msgs.filter((m) => m.role === "assistant");
+    expect(assistant.map((m) => m.content)).toEqual([
+      "Đoạn một nha.",
+      "Đoạn hai — bạn nghĩ sao?",
+    ]);
   });
 
   it("captures lead when user sends phone", async () => {

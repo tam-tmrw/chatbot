@@ -69,7 +69,8 @@ export async function handleTurn(
         );
   await appendMessage(sessionId, "user", input.text);
 
-  const history = await loadRecentMessages(sessionId, 12);
+  // ponytail: 24 rows ≈ ~12 turns once assistant bubbles are multi-row
+  const history = await loadRecentMessages(sessionId, 24);
   const userTexts = history
     .filter((m) => m.role === "user")
     .map((m) => m.content);
@@ -128,7 +129,8 @@ export async function handleTurn(
     }
   }
 
-  const text = joinBubbles(texts);
-  await appendMessage(sessionId, "assistant", text);
+  for (const t of texts) {
+    await appendMessage(sessionId, "assistant", t);
+  }
   return out(sessionId, texts, leadCaptured);
 }
