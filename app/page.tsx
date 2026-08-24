@@ -1,9 +1,9 @@
-import { Chat } from "@/app/components/Chat";
+import { HomeChat } from "@/app/components/HomeChat";
 
 export default function HomePage() {
   return (
     <main>
-      <Chat />
+      <HomeChat />
       <p className="disclaimer">
         Demo chat với Minh — giá/thông số tham khảo, không phải tổng đài
         Hyundai.

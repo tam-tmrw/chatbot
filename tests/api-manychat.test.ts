@@ -4,6 +4,7 @@ vi.mock("@/lib/conversation/engine", () => ({
   handleTurn: vi.fn(async () => ({
     sessionId: "sess-mc",
     text: "**Yassss** hello",
+    texts: ["**Yassss** hello"],
     leadCaptured: false,
   })),
 }));

@@ -72,4 +72,14 @@ describe("toDynamicBlock", () => {
     const block = toDynamicBlock("hi");
     expect(block.content.external_message_callback).toBeUndefined();
   });
+
+  it("maps multiple texts to multiple messages", () => {
+    process.env.PUBLIC_BASE_URL = "https://demo.example";
+    process.env.MANYCHAT_CALLBACK_SECRET = "s3cret";
+    const block = toDynamicBlock(["**a**", "b"]);
+    expect(block.content.messages).toEqual([
+      { type: "text", text: "a" },
+      { type: "text", text: "b" },
+    ]);
+  });
 });

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, lt } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { ChannelName } from "@/lib/channels/types";
 import { getDb } from "@/lib/db/client";
@@ -74,4 +74,49 @@ export async function loadRecentMessages(
     .where(eq(messages.sessionId, sessionId))
     .orderBy(asc(messages.id));
   return rows.slice(-limit).map(({ role, content }) => ({ role, content }));
+}
+
+export async function sessionExists(sessionId: string): Promise<boolean> {
+  const db = getDb();
+  const rows = await db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(eq(sessions.id, sessionId))
+    .limit(1);
+  return rows.length > 0;
+}
+
+export type MessageRow = {
+  id: number;
+  role: "user" | "assistant" | "system";
+  content: string;
+};
+
+/** Newest page first call; pass beforeId for older pages. Chronological order in `messages`. */
+export async function loadMessagesPage(
+  sessionId: string,
+  opts?: { beforeId?: number; limit?: number },
+): Promise<{ messages: MessageRow[]; hasMore: boolean }> {
+  const limit = Math.min(Math.max(opts?.limit ?? 20, 1), 50);
+  const db = getDb();
+  const beforeId = opts?.beforeId;
+
+  const rows = await db
+    .select({
+      id: messages.id,
+      role: messages.role,
+      content: messages.content,
+    })
+    .from(messages)
+    .where(
+      beforeId != null
+        ? and(eq(messages.sessionId, sessionId), lt(messages.id, beforeId))
+        : eq(messages.sessionId, sessionId),
+    )
+    .orderBy(desc(messages.id))
+    .limit(limit + 1);
+
+  const hasMore = rows.length > limit;
+  const page = (hasMore ? rows.slice(0, limit) : rows).reverse();
+  return { messages: page, hasMore };
 }

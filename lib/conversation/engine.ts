@@ -1,4 +1,5 @@
 import type { IncomingMessage, OutgoingMessage } from "@/lib/channels/types";
+import { joinBubbles, parseBubbles } from "@/lib/conversation/bubbles";
 import {
   extractLeadProfile,
   leadSummary,
@@ -38,6 +39,19 @@ async function chatWithTimeout(
   }
 }
 
+function out(
+  sessionId: string,
+  texts: string[],
+  leadCaptured: boolean,
+): OutgoingMessage {
+  return {
+    sessionId,
+    texts,
+    text: joinBubbles(texts),
+    leadCaptured,
+  };
+}
+
 export async function handleTurn(
   input: IncomingMessage,
   deps?: { llm?: LlmProvider; llmTimeoutMs?: number },
@@ -55,7 +69,8 @@ export async function handleTurn(
         );
   await appendMessage(sessionId, "user", input.text);
 
-  const history = await loadRecentMessages(sessionId, 12);
+  // ponytail: 24 rows ≈ ~12 turns once assistant bubbles are multi-row
+  const history = await loadRecentMessages(sessionId, 24);
   const userTexts = history
     .filter((m) => m.role === "user")
     .map((m) => m.content);
@@ -86,13 +101,13 @@ export async function handleTurn(
 
   const leadCaptured = Boolean(profile.phone);
   const reask = validationReask(issues);
-  let reply: string;
+  let texts: string[];
   if (reask) {
-    reply = reask;
+    texts = [reask];
   } else {
     try {
       const llm = deps?.llm ?? getLlmProvider();
-      reply = await chatWithTimeout(
+      const raw = await chatWithTimeout(
         llm,
         [
           {
@@ -106,13 +121,16 @@ export async function handleTurn(
         ],
         deps?.llmTimeoutMs ?? DEFAULT_LLM_TIMEOUT_MS,
       );
+      texts = parseBubbles(raw);
     } catch (err) {
       const reason = err instanceof Error ? err.message : "unknown";
       console.error("[llm]", reason);
-      reply = FALLBACK;
+      texts = [FALLBACK];
     }
   }
 
-  await appendMessage(sessionId, "assistant", reply);
-  return { sessionId, text: reply, leadCaptured };
+  for (const t of texts) {
+    await appendMessage(sessionId, "assistant", t);
+  }
+  return out(sessionId, texts, leadCaptured);
 }
