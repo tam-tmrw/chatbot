@@ -4,6 +4,7 @@ vi.mock("@/lib/conversation/engine", () => ({
   handleTurn: vi.fn(async () => ({
     sessionId: "abc",
     text: "hello",
+    texts: ["hello"],
     leadCaptured: false,
   })),
 }));
@@ -49,6 +50,7 @@ describe("POST /api/chat", () => {
     expect(json).toEqual({
       sessionId: "abc",
       reply: "hello",
+      replies: ["hello"],
       leadCaptured: false,
     });
   });

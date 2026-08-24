@@ -9,6 +9,9 @@ export type IncomingMessage = {
 
 export type OutgoingMessage = {
   sessionId: string;
+  /** Joined bubbles — for DB history and single-string consumers */
   text: string;
+  /** 1–3 segments for web stagger / ManyChat multi-message */
+  texts: string[];
   leadCaptured: boolean;
 };

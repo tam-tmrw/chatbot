@@ -7,13 +7,18 @@ type Msg = { role: "user" | "assistant"; content: string };
 
 const STORAGE_KEY = "vi_chat_session_id";
 
-// ponytail: web-only think time — bump here; later: env / per-channel config
-const REPLY_DELAY_MS = 1000;
+// ponytail: web-only — bump later / env if needed
+const REPLY_DELAY_MS = 1500;
+const BUBBLE_STAGGER_MS = 1000;
+
+function wait(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 function waitAtLeast(startedAt: number, minMs: number): Promise<void> {
   const left = minMs - (Date.now() - startedAt);
   if (left <= 0) return Promise.resolve();
-  return new Promise((r) => setTimeout(r, left));
+  return wait(left);
 }
 
 export function Chat() {
@@ -51,10 +56,20 @@ export function Chat() {
       await waitAtLeast(startedAt, REPLY_DELAY_MS);
       localStorage.setItem(STORAGE_KEY, data.sessionId);
       setSessionId(data.sessionId);
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: data.reply as string },
-      ]);
+
+      const replies: string[] = Array.isArray(data.replies)
+        ? data.replies.filter((r: unknown): r is string => typeof r === "string")
+        : typeof data.reply === "string"
+          ? [data.reply]
+          : [];
+
+      for (let i = 0; i < replies.length; i++) {
+        if (i > 0) await wait(BUBBLE_STAGGER_MS);
+        setMessages((m) => [
+          ...m,
+          { role: "assistant", content: replies[i] },
+        ]);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Lỗi");
     } finally {
@@ -79,7 +94,10 @@ export function Chat() {
           </div>
         ))}
         {loading ? (
-          <div className="bubble assistant typing" aria-label="Minh đang soạn tin">
+          <div
+            className="bubble assistant typing"
+            aria-label="Minh đang soạn tin"
+          >
             <span className="typing-dot" />
             <span className="typing-dot" />
             <span className="typing-dot" />
@@ -99,6 +117,7 @@ export function Chat() {
           onChange={(e) => setInput(e.target.value)}
           placeholder="Nhắn gì đó..."
           maxLength={2000}
+          disabled={loading}
         />
         <button type="submit" disabled={loading}>
           Gửi

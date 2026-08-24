@@ -38,7 +38,7 @@ export async function POST(req: Request) {
 
   try {
     const out = await handleTurn(parsed.value);
-    return Response.json(toDynamicBlock(out.text));
+    return Response.json(toDynamicBlock(out.texts));
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Server error";
     if (/DATABASE_URL|ECONNREFUSED|mysql/i.test(msg)) return unavailable();

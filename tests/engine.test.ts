@@ -10,6 +10,14 @@ const mockLlm: LlmProvider = {
   },
 };
 
+const mockJsonLlm: LlmProvider = {
+  async chat() {
+    return JSON.stringify({
+      bubbles: ["Đoạn một nha.", "Đoạn hai — bạn nghĩ sao?"],
+    });
+  },
+};
+
 describe.skipIf(!hasDb)("handleTurn", () => {
   it("returns sessionId and reply", async () => {
     const out = await handleTurn(
@@ -22,7 +30,25 @@ describe.skipIf(!hasDb)("handleTurn", () => {
     );
     expect(out.sessionId).toBeTruthy();
     expect(out.text).toContain("Ok chị");
+    expect(out.texts).toEqual([out.text]);
     expect(out.leadCaptured).toBe(false);
+  });
+
+  it("parses LLM JSON into multiple texts", async () => {
+    const out = await handleTurn(
+      {
+        channel: "web",
+        channelUserId: "engine-user-bubbles",
+        text: "Palisade có gì hay?",
+      },
+      { llm: mockJsonLlm },
+    );
+    expect(out.texts).toEqual([
+      "Đoạn một nha.",
+      "Đoạn hai — bạn nghĩ sao?",
+    ]);
+    expect(out.text).toContain("Đoạn một");
+    expect(out.text).toContain("Đoạn hai");
   });
 
   it("captures lead when user sends phone", async () => {

@@ -59,12 +59,17 @@ export function parseManyChatBody(
   };
 }
 
-export function toDynamicBlock(text: string): ManyChatDynamicBlock {
-  const stripped = stripMarkdownForMessenger(text).slice(0, MAX_LEN);
+export function toDynamicBlock(
+  textOrTexts: string | string[],
+): ManyChatDynamicBlock {
+  const parts = (Array.isArray(textOrTexts) ? textOrTexts : [textOrTexts])
+    .map((t) => stripMarkdownForMessenger(t).slice(0, MAX_LEN))
+    .map((t) => t || " ")
+    .slice(0, 3);
   const base = process.env.PUBLIC_BASE_URL?.replace(/\/$/, "");
   const secret = process.env.MANYCHAT_CALLBACK_SECRET;
   const content: ManyChatDynamicBlock["content"] = {
-    messages: [{ type: "text", text: stripped || " " }],
+    messages: parts.map((text) => ({ type: "text" as const, text })),
     actions: [],
     quick_replies: [],
   };
