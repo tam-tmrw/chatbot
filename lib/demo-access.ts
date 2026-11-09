@@ -19,6 +19,7 @@ export function cookieName(demo: DemoId): string {
 export function codeMatches(demo: DemoId, given: string): boolean {
   const expected = process.env[ENV[demo]] ?? "";
   if (expected.length !== 6 || given.length !== 6) return false;
+  if (Buffer.byteLength(expected) !== Buffer.byteLength(given)) return false;
   return timingSafeEqual(Buffer.from(expected), Buffer.from(given));
 }
 

@@ -131,16 +131,33 @@ function go(session: Session, linear: StepId) {
   session.step = linear;
 }
 
+const STEP_FIELD: Partial<Record<StepId, keyof Session["fields"]>> = {
+  baby_name: "babyName",
+  display_name: "displayName",
+  gender: "gender",
+  age_range: "ageRange",
+  hobby: "hobby",
+};
+
+function mayOverwriteField(
+  session: Session,
+  field: "babyName" | "displayName" | "gender" | "ageRange" | "hobby",
+): boolean {
+  if (STEP_FIELD[session.step] === field) return true;
+  const current = session.fields[field];
+  return current == null;
+}
+
 function applyExtracted(session: Session, extracted: Extracted): boolean {
   let applied = false;
-  if (extracted.babyName) {
+  if (extracted.babyName && mayOverwriteField(session, "babyName")) {
     const name = parseBabyName(extracted.babyName);
     if (name) {
       session.fields.babyName = name;
       applied = true;
     }
   }
-  if (extracted.displayName) {
+  if (extracted.displayName && mayOverwriteField(session, "displayName")) {
     const name = parseDisplayName(extracted.displayName);
     if (name) {
       session.fields.displayName = name;
@@ -148,23 +165,29 @@ function applyExtracted(session: Session, extracted: Extracted): boolean {
     }
   }
   if (
-    extracted.gender === "boy" ||
-    extracted.gender === "girl" ||
-    extracted.gender === "unspecified"
+    (extracted.gender === "boy" ||
+      extracted.gender === "girl" ||
+      extracted.gender === "unspecified") &&
+    mayOverwriteField(session, "gender")
   ) {
     session.fields.gender = extracted.gender;
     applied = true;
   }
   if (
-    extracted.ageRange === "<1" ||
-    extracted.ageRange === "1-2" ||
-    extracted.ageRange === "2-3" ||
-    extracted.ageRange === ">3"
+    (extracted.ageRange === "<1" ||
+      extracted.ageRange === "1-2" ||
+      extracted.ageRange === "2-3" ||
+      extracted.ageRange === ">3") &&
+    mayOverwriteField(session, "ageRange")
   ) {
     session.fields.ageRange = extracted.ageRange;
     applied = true;
   }
-  if (extracted.hobby && HOBBIES.some((h) => h.id === extracted.hobby)) {
+  if (
+    extracted.hobby &&
+    HOBBIES.some((h) => h.id === extracted.hobby) &&
+    mayOverwriteField(session, "hobby")
+  ) {
     session.fields.hobby = extracted.hobby;
     applied = true;
   }

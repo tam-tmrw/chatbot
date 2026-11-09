@@ -17,6 +17,11 @@ export function HuggiesChat() {
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
   const urls = useRef<string[]>([]);
+  const sessionIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
 
   useEffect(() => {
     return () => {
@@ -30,6 +35,10 @@ export function HuggiesChat() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ scenario: nextScenario, ai: nextAi }),
     });
+    if (!res.ok) {
+      setError("Không tạo được phiên");
+      return;
+    }
     const data = await res.json();
     setSessionId(data.sessionId);
     setBubbles((data.messages as string[]).map((line) => ({ role: "assistant", text: line })));
@@ -74,8 +83,11 @@ export function HuggiesChat() {
   async function poll(id: string) {
     for (let i = 0; i < 20; i += 1) {
       await new Promise((r) => setTimeout(r, 500));
+      if (sessionIdRef.current !== id) return;
       const res = await fetch(`/api/huggies/job?sessionId=${encodeURIComponent(id)}`);
+      if (!res.ok) continue;
       const data = await res.json();
+      if (sessionIdRef.current !== id) return;
       if ((data.messages as string[] | undefined)?.length) {
         setBubbles((prev) => [
           ...prev,

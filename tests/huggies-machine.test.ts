@@ -53,6 +53,30 @@ describe("huggies machine", () => {
     expect(session.fields.photoOk).toBe(true);
   });
 
+  it("does not overwrite babyName on display_name when extract mislabels", async () => {
+    const extract = vi.fn(async () => ({
+      babyName: "Wrong",
+      displayName: "Bin",
+    }));
+    let s = freshSession({
+      id: "s1",
+      scenario: "success",
+      ai: true,
+      termsVersion: "huggies-video-2026-11",
+    });
+    s = (await say(s, "1")).session;
+    s = (await say(s, "1")).session;
+    s.fields.babyName = "Bé Bình";
+    s.step = "display_name";
+    const out = await applyTurn(
+      s,
+      { type: "text", text: "Bin" },
+      deps({ extract }),
+    );
+    expect(out.session.fields.babyName).toBe("Bé Bình");
+    expect(out.session.fields.displayName).toBe("Bin");
+  });
+
   it("jumps to the next missing field when extract fills several", async () => {
     const extract = vi.fn(async () => ({
       babyName: "Bin",

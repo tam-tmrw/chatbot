@@ -5,9 +5,9 @@ import {
 } from "@aws-sdk/client-rekognition";
 import type { FaceFacts } from "@/lib/huggies/types";
 
-type Sender = { send: (cmd: unknown) => Promise<unknown> };
+type Sender = Pick<RekognitionClient, "send">;
 
-export function defaultRekognitionClient(): Sender {
+export function defaultRekognitionClient(): RekognitionClient {
   return new RekognitionClient({ region: process.env.AWS_REGION });
 }
 

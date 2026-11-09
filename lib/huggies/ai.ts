@@ -24,7 +24,7 @@ export async function extractFields(
         {
           role: "system",
           content:
-            "Return one JSON object only. Keys: babyName, displayName, gender (boy|girl|unspecified|null), ageRange (<1|1-2|2-3|>3|null), hobby (cars|animals|music|dance|sports|princess|space|art|toys|nature|null), confirm boolean, reply string. Do not invent a hobby. Do not infer gender from a photo. Step: " +
+            "Return one JSON object only. Keys: babyName, displayName, gender (boy|girl|unspecified|null), ageRange (<1|1-2|2-3|>3|null), hobby (cars|animals|music|dance|sports|princess|space|art|toys|nature|null), confirm boolean, reply string. Do not invent a hobby. Do not infer gender from a photo. If the user gives a bare answer (no field label), put it in the field for the current step only (baby_name→babyName, display_name→displayName, gender→gender, age_range→ageRange, hobby→hobby). Step: " +
             step,
         },
         { role: "user", content: text },
