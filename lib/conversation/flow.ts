@@ -1,4 +1,4 @@
-function foldVn(s: string): string {
+export function foldVn(s: string): string {
   return s
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
