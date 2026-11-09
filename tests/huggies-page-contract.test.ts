@@ -1,0 +1,16 @@
+import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+
+describe("huggies page contract", () => {
+  it("gates on the huggies cookie and posts to the huggies API", () => {
+    const page = readFileSync("app/huggies/page.tsx", "utf8");
+    const chat = readFileSync("app/huggies/HuggiesChat.tsx", "utf8");
+    expect(page).toContain('demo="huggies"');
+    expect(page).toContain('cookieName("huggies")');
+    expect(chat).toContain("/api/huggies/session");
+    expect(chat).toContain("/api/huggies/message");
+    expect(chat).toContain("/api/huggies/job");
+    expect(chat).toContain("error_photo_invalid");
+    expect(chat).toContain("error_render");
+  });
+});
