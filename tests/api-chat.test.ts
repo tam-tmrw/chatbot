@@ -12,11 +12,23 @@ vi.mock("@/lib/conversation/engine", () => ({
 import { POST } from "@/app/api/chat/route";
 import { handleTurn } from "@/lib/conversation/engine";
 
+const hyundaiCookie = { cookie: "vi_demo_hyundai=1" };
+
 describe("POST /api/chat", () => {
-  it("returns 400 for empty message", async () => {
+  it("returns 401 without the hyundai demo cookie", async () => {
     const req = new Request("http://localhost/api/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: "hi", channelUserId: "u1" }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for empty message", async () => {
+    const req = new Request("http://localhost/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...hyundaiCookie },
       body: JSON.stringify({ message: "" }),
     });
     const res = await POST(req);
@@ -29,7 +41,7 @@ describe("POST /api/chat", () => {
     );
     const req = new Request("http://localhost/api/chat", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...hyundaiCookie },
       body: JSON.stringify({ message: "hi", channelUserId: "u1" }),
     });
     const res = await POST(req);
@@ -41,7 +53,7 @@ describe("POST /api/chat", () => {
   it("returns reply payload", async () => {
     const req = new Request("http://localhost/api/chat", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...hyundaiCookie },
       body: JSON.stringify({ message: "hi", channelUserId: "u1" }),
     });
     const res = await POST(req);

@@ -13,6 +13,7 @@ import {
 
 const mockedExists = vi.mocked(sessionExists);
 const mockedPage = vi.mocked(loadMessagesPage);
+const hyundaiCookie = { cookie: "vi_demo_hyundai=1" };
 
 describe("GET /api/chat/sessions/[sessionId]/messages", () => {
   beforeEach(() => {
@@ -22,7 +23,9 @@ describe("GET /api/chat/sessions/[sessionId]/messages", () => {
   it("returns 404 when session missing", async () => {
     mockedExists.mockResolvedValue(false);
     const res = await GET(
-      new Request("http://localhost/api/chat/sessions/x/messages"),
+      new Request("http://localhost/api/chat/sessions/x/messages", {
+        headers: hyundaiCookie,
+      }),
       { params: Promise.resolve({ sessionId: "x" }) },
     );
     expect(res.status).toBe(404);
@@ -37,6 +40,7 @@ describe("GET /api/chat/sessions/[sessionId]/messages", () => {
     const res = await GET(
       new Request(
         "http://localhost/api/chat/sessions/abc/messages?limit=20&beforeId=9",
+        { headers: hyundaiCookie },
       ),
       { params: Promise.resolve({ sessionId: "abc" }) },
     );
