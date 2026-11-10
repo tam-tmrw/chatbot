@@ -79,6 +79,7 @@ describe("huggies API", () => {
       }),
     );
     const body = await photo.json();
+    expect(body.mode).toBe("guide");
     expect(body.step).not.toBe("confirm");
     expect(body.messages.join(" ")).toMatch(/trước|thông tin|điều khoản/i);
   });

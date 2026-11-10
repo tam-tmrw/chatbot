@@ -14,7 +14,7 @@ export function videoUrlsFromEnv(): string[] {
 export function huggiesDeps(ai: boolean): MachineDeps {
   return {
     now: () => Date.now(),
-    delayMs: Number(process.env.HUGGIES_DELAY_MS ?? 1500),
+    delayMs: Number(process.env.HUGGIES_DELAY_MS ?? 3000),
     newJobId: () => "job_" + crypto.randomUUID(),
     videoUrls: videoUrlsFromEnv(),
     pickVideo: (urls) => urls[Math.floor(Math.random() * urls.length)] ?? "",
