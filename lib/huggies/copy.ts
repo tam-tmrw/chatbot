@@ -126,9 +126,9 @@ export function promptFor(session: Session): { text: string; buttons: Button[] }
       if (session.mode === "guide") {
         return {
           text: [
-            "Xin chào ba mẹ! Mình là trợ lý Huggies cho chiến dịch tạo video nhảy đáng yêu cho bé.",
-            "Ba mẹ chỉ cần trả lời tự nhiên vài câu (tên bé, giới tính, độ tuổi, sở thích), đồng ý điều khoản dùng ảnh, rồi gửi 1 ảnh mặt bé rõ — mình sẽ ghép thành video ngắn.",
-            "Nhắn “bắt đầu” (hoặc “ok”) để xem điều khoản và bắt đầu nhé.",
+            "👋 Xin chào ba mẹ! Mình là trợ lý Huggies cho chiến dịch tạo video nhảy đáng yêu cho bé.",
+            "📝 Ba mẹ chỉ cần trả lời tự nhiên vài câu (tên bé, giới tính, độ tuổi, sở thích), đồng ý điều khoản dùng ảnh, rồi gửi 1 ảnh mặt bé rõ — mình sẽ ghép thành video ngắn.",
+            "✨ Nhắn “bắt đầu” (hoặc “ok”) để xem điều khoản và bắt đầu nhé.",
           ].join("\n"),
           buttons: [],
         };
@@ -232,15 +232,19 @@ export function promptFor(session: Session): { text: string; buttons: Button[] }
       );
     case "processing":
       return {
-        text: `Đang tạo video cho bé ${f.displayName ?? ""}… Ba mẹ chờ mình một chút nhé!`,
+        text: `⏳ Đang tạo video cho bé ${f.displayName ?? ""}… Ba mẹ chờ mình một chút nhé!`,
         buttons: [],
       };
     case "result":
-      return surface(ch, `Xong rồi ạ! Video của bé ${f.displayName ?? ""} đây. Ba mẹ xem thử và chọn bước tiếp theo nhé.`, [
-        { id: "share", label: withIcon("📤", "Chia sẻ") },
-        { id: "replay", label: withIcon("🔄", "Làm lại") },
-        { id: "learn", label: withIcon("💙", "Tìm hiểu sản phẩm Huggies") },
-      ]);
+      return surface(
+        ch,
+        `🎉 Xong rồi ạ! Video của bé ${f.displayName ?? ""} đây. Ba mẹ bấm link bên dưới để xem, rồi chọn bước tiếp theo nhé.`,
+        [
+          { id: "share", label: withIcon("📤", "Chia sẻ") },
+          { id: "replay", label: withIcon("🔄", "Làm lại") },
+          { id: "learn", label: withIcon("💙", "Tìm hiểu sản phẩm Huggies") },
+        ],
+      );
     case "error": {
       const canRetry =
         session.job?.errorCode === "render_fail" && (session.job.retries ?? 0) < 2;

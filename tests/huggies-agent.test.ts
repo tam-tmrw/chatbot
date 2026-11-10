@@ -104,7 +104,7 @@ describe("applyGuideTurn", () => {
     expect(out.session.step).toBe("consent");
     const msg = out.messages.join("\n");
     expect(msg).not.toMatch(/chưa nghe rõ/i);
-    expect(msg).toMatch(/giải thích lại/i);
+    expect(msg).toMatch(/nhắc lại|giải thích lại/i);
     expect(msg).toContain("https://terms.example/tc");
 
     const out2 = await applyGuideTurn(
@@ -313,6 +313,21 @@ describe("applyGuideTurn", () => {
     const msg = out.messages.join("\n");
     expect(msg).toMatch(/ảnh/);
     expect(msg).not.toMatch(/xác nhận/);
+  });
+
+  it("keeps baby name when user says xài tên này luôn", async () => {
+    const fail = vi.fn(async () => {
+      throw new Error("timeout");
+    });
+    const s = freshSession({ id: "g-keep", mode: "guide", termsVersion: "t" });
+    s.fields.consent = true;
+    s.fields.consentAt = "t";
+    s.fields.babyName = "Bảo Bảo";
+    s.step = "display_name";
+    const out = await applyGuideTurn(s, { type: "text", text: "xài tên này luôn" }, baseDeps({ guideChat: fail }));
+    expect(fail).not.toHaveBeenCalled();
+    expect(out.session.fields.displayName).toBe("BảoBảo");
+    expect(out.session.step).toBe("gender");
   });
 
   it("walks text steps with heuristics when LLM always fails", async () => {

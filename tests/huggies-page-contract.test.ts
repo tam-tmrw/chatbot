@@ -20,4 +20,11 @@ describe("huggies page contract", () => {
     expect(chat).toMatch(/guidePhotoLocked = step !== "photo"/);
     expect(chat).toMatch(/disabled=\{busy \|\| guidePhotoLocked\}/);
   });
+
+  it("guide uses camera click; dropzone is messenger-only; video has clickable link", () => {
+    const chat = readFileSync("app/huggies/HuggiesChat.tsx", "utf8");
+    expect(chat).toMatch(/showDropzone = step === "photo" && channel === "messenger"/);
+    expect(chat).toContain("Xem / mở video");
+    expect(chat).toContain("target=\"_blank\"");
+  });
 });

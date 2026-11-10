@@ -241,10 +241,10 @@ export function HuggiesChat() {
     mode === "flow" &&
     (step === "hobby" || step === "age_range" || step === "gender" || step === "consent");
   const showChips = channel === "messenger" && buttons.length > 0;
-  const showDropzone = step === "photo" && (channel === "messenger" || mode === "guide");
+  // Guide uses composer camera click like Flow/Zalo — dropzone only for Messenger mock.
+  const showDropzone = step === "photo" && channel === "messenger";
   const guidePhotoLocked = step !== "photo";
-  const showMedia =
-    channel === "messenger" && step === "result" && (job?.previewUrl || job?.videoUrl);
+  const showMedia = step === "result" && !!(job?.previewUrl || job?.videoUrl);
   const modeShort = mode === "guide" ? "AI guide" : "Flow";
   const channelShort =
     channel === "zalo" ? "Demo Zalo · text/số" : "Demo Messenger · button";
@@ -400,12 +400,13 @@ export function HuggiesChat() {
           <div className="hg-media-card">
             {job?.previewUrl ? <img alt="" src={job.previewUrl} /> : null}
             {job?.videoUrl ? <video controls src={job.videoUrl} playsInline /> : null}
-          </div>
-        ) : null}
-
-        {channel === "zalo" && step === "result" && job?.videoUrl ? (
-          <div className="bubble assistant">
-            <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{job.videoUrl}</p>
+            {job?.videoUrl ? (
+              <p className="hg-video-link">
+                <a href={job.videoUrl} target="_blank" rel="noopener noreferrer">
+                  🎬 Xem / mở video
+                </a>
+              </p>
+            ) : null}
           </div>
         ) : null}
 

@@ -21,9 +21,9 @@ const AGE_LABEL = {
 export function consentPrompt(termsUrl: string): string {
   const url = termsUrl.trim() || "#";
   return [
-    "Trước khi bắt đầu, mình cần ba mẹ đồng ý Điều khoản sử dụng ảnh để tạo video (ảnh chỉ dùng cho mục đích này).",
-    `Điều khoản: ${url}`,
-    "Ba mẹ trả lời “đồng ý” để tiếp tục, hoặc “không đồng ý” nếu muốn dừng nhé.",
+    "📄 Trước khi bắt đầu, mình cần ba mẹ đồng ý Điều khoản sử dụng ảnh để tạo video nhé (ảnh chỉ dùng cho mục đích này).",
+    `🔗 Điều khoản: ${url}`,
+    "✅ Ba mẹ trả lời “đồng ý” để tiếp tục, hoặc “không đồng ý” nếu muốn dừng ạ.",
   ].join("\n");
 }
 
@@ -49,37 +49,43 @@ export function looksLikeConfused(text: string): boolean {
 
 /** Re-state what the guide still needs — never "chưa nghe rõ". */
 export function guideReprompt(fields: Fields, termsUrl: string): string {
-  return `Mình giải thích lại bước đang cần nhé:\n${firstMissingHint(fields, { termsUrl })}`;
+  return `😊 Không sao ạ, mình nhắc lại bước đang cần nhé:\n${firstMissingHint(fields, { termsUrl })}`;
 }
 
 function hobbyHint(): string {
   const labels = HOBBIES.map((h) => h.label).join(", ");
-  return `Bé thích gì nhất ạ? Chọn một trong: ${labels}.`;
+  return [
+    "💫 Bé thích gì nhất ạ? Ba mẹ chọn giúp mình một sở thích để mình chọn kiểu video cho hợp nhé.",
+    `Gợi ý: ${labels}.`,
+  ].join("\n");
 }
 
 export function confirmSummary(fields: Fields): string {
   const hobby = HOBBIES.find((h) => h.id === fields.hobby)?.label ?? "";
   return [
-    "Mình tóm tắt lại cho ba mẹ kiểm tra nhé:",
-    `Tên: ${fields.babyName ?? ""}`,
-    `Tên trên video: ${fields.displayName ?? ""}`,
-    `Giới tính: ${fields.gender ? GENDER_LABEL[fields.gender] : ""}`,
-    `Độ tuổi: ${fields.ageRange ? AGE_LABEL[fields.ageRange] : ""}`,
-    `Sở thích: ${hobby}`,
-    `Ảnh: ${fields.photoOk ? "đã nhận" : "chưa có"}`,
+    "✨ Mình tóm tắt lại cho ba mẹ kiểm tra nhé:",
+    `👶 Tên: ${fields.babyName ?? ""}`,
+    `🏷️ Tên trên video: ${fields.displayName ?? ""}`,
+    `🚻 Giới tính: ${fields.gender ? GENDER_LABEL[fields.gender] : ""}`,
+    `📅 Độ tuổi: ${fields.ageRange ? AGE_LABEL[fields.ageRange] : ""}`,
+    `💫 Sở thích: ${hobby}`,
+    `📷 Ảnh: ${fields.photoOk ? "đã nhận" : "chưa có"}`,
     "",
-    "Ba mẹ xác nhận tạo video giúp mình nhé?",
+    "✅ Ổn rồi thì trả lời “xác nhận” (hoặc “ok”) để mình tạo video nhé!",
   ].join("\n");
 }
 
-export const PHOTO_ASK = "Thông tin đủ rồi ạ. Ba mẹ gửi 1 ảnh mặt bé rõ, nhìn thẳng, đủ sáng nhé.";
+export const PHOTO_ASK =
+  "📷 Thông tin đủ rồi ạ! Ba mẹ bấm nút camera bên dưới để gửi 1 ảnh mặt bé rõ, nhìn thẳng, đủ sáng nhé.";
 
 const HINTS: Record<Exclude<TextFieldKey, "consent" | "hobby">, string> = {
-  babyName: "Bé nhà mình tên gì ạ? Ví dụ: Bin, Minh Anh.",
+  babyName:
+    "👶 Ba mẹ cho Huggies hỏi bé nhà mình tên gì ạ? Ví dụ: Bin, Minh Anh — trả lời tự nhiên giúp mình nhé.",
   displayName:
-    "Tên trên video tối đa 12 ký tự, viết liền. Ví dụ: Bin, MinhAnh — hoặc nói “giữ tên này”.",
-  gender: "Bé là bé trai, bé gái, hay không nêu ạ?",
-  ageRange: "Bé đang ở độ tuổi nào ạ? (dưới 1 / 1–2 / 2–3 / trên 3)",
+    "🏷️ Tên hiện trên video tối đa 12 ký tự và viết liền (không dấu cách). Ba mẹ muốn giữ tên bé, hay đặt biệt danh ngắn hơn? Ví dụ: Bin, MinhAnh — hoặc nói “giữ tên này”.",
+  gender: "🚻 Bé nhà mình là bé trai, bé gái, hay ba mẹ muốn không nêu ạ?",
+  ageRange:
+    "📅 Bé đang ở độ tuổi nào ạ? Ba mẹ chọn giúp mình: dưới 1 / 1–2 / 2–3 / trên 3 tuổi nhé.",
 };
 
 export function missingTextKeys(fields: Fields): TextFieldKey[] {

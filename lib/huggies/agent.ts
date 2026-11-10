@@ -113,7 +113,10 @@ function applyGuideHeuristics(session: Session, userText: string): boolean {
       }
     }
   } else if (!f.displayName) {
-    if (isAffirmative(userText)) {
+    const keepName =
+      isAffirmative(userText) ||
+      /\b(giu ten|giu nguyen|dung ten|xai ten|ten nay|de nguyen|giu luon)\b/.test(t);
+    if (keepName) {
       const n = parseDisplayName(f.babyName.replace(/\s+/g, "").slice(0, 12));
       if (n) {
         f.displayName = n;
@@ -327,7 +330,11 @@ export async function applyGuideTurn(
     return viewGuide(session, [END_MSG]);
   }
 
-  if (session.step === "confirm" && session.fields.photoOk && isAffirmative(userText)) {
+  if (
+    session.step === "confirm" &&
+    session.fields.photoOk &&
+    (isAffirmative(userText) || /\bxac nhan\b/.test(foldVn(userText)))
+  ) {
     return startVideoJob(session, deps);
   }
 

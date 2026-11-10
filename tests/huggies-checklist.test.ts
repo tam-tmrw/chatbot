@@ -67,9 +67,16 @@ describe("huggies checklist", () => {
 
   it("guideReprompt re-explains without chưa nghe rõ", () => {
     const msg = guideReprompt(empty(), "https://terms.example/tc");
-    expect(msg).toMatch(/giải thích lại/i);
+    expect(msg).toMatch(/nhắc lại|giải thích lại/i);
     expect(msg).not.toMatch(/chưa nghe rõ/i);
     expect(msg).toContain("https://terms.example/tc");
+  });
+
+  it("babyName hint is warm and mentions Huggies", () => {
+    const f = empty();
+    f.consent = true;
+    expect(firstMissingHint(f)).toMatch(/Huggies hỏi|tên/i);
+    expect(firstMissingHint(f)).toMatch(/👶/);
   });
 
   it("hobby hint lists every HOBBIES label", () => {

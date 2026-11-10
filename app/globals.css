@@ -737,6 +737,18 @@ main {
   max-width: 85%;
 }
 
+.hg-video-link {
+  margin: 0.65rem 0 0;
+  text-align: center;
+}
+
+.hg-video-link a {
+  color: #0b5cab;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .hg-media-card img,
 .hg-media-card video {
   display: block;
