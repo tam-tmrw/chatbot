@@ -13,4 +13,11 @@ describe("huggies page contract", () => {
     expect(chat).toContain('"mode"');
     expect(chat).toContain("guide");
   });
+
+  it("locks guide composer photo until photo step", () => {
+    const chat = readFileSync("app/huggies/HuggiesChat.tsx", "utf8");
+    expect(chat).toContain("guidePhotoLocked");
+    expect(chat).toMatch(/mode === "guide" && step !== "photo"/);
+    expect(chat).toMatch(/disabled=\{busy \|\| guidePhotoLocked\}/);
+  });
 });

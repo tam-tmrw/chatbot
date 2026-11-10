@@ -214,6 +214,7 @@ export function HuggiesChat() {
   }
 
   function pickFile(file: File) {
+    if (mode === "guide" && step !== "photo") return;
     const imageUrl = URL.createObjectURL(file);
     urls.current.push(imageUrl);
     const reader = new FileReader();
@@ -241,6 +242,7 @@ export function HuggiesChat() {
     (step === "hobby" || step === "age_range" || step === "gender" || step === "consent");
   const showChips = channel === "messenger" && buttons.length > 0;
   const showDropzone = step === "photo" && (channel === "messenger" || mode === "guide");
+  const guidePhotoLocked = mode === "guide" && step !== "photo";
   const showMedia =
     channel === "messenger" && step === "result" && (job?.previewUrl || job?.videoUrl);
   const modeShort = mode === "guide" ? "AI guide" : "Flow";
@@ -473,8 +475,11 @@ export function HuggiesChat() {
           type="button"
           className={step === "photo" ? "hg-photo-btn hg-photo-btn-active" : "hg-photo-btn"}
           aria-label="Gửi ảnh bé"
-          disabled={busy}
-          onClick={() => fileRef.current?.click()}
+          disabled={busy || guidePhotoLocked}
+          onClick={() => {
+            if (guidePhotoLocked) return;
+            fileRef.current?.click();
+          }}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path
