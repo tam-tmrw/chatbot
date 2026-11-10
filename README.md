@@ -48,3 +48,7 @@ Set `ADMIN_SECRET` in `.env.local`. Open [http://localhost:3000/admin/leads](htt
 5. Web chat at `/` is unchanged.
 
 Details: `docs/manychat-gateway-design.md`.
+
+## Huggies pitch
+
+Open `/huggies`. Set `HUGGIES_ACCESS_CODE` and `HYUNDAI_ACCESS_CODE` (6 characters each). Set `HUGGIES_VIDEO_URLS` to a comma-separated list of S3 video URLs, plus `AWS_REGION`, `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY` for photo checks. Hyundai chat behavior is unchanged aside from the access code on `/`.

@@ -1,7 +1,11 @@
 import { parseWebChatBody } from "@/lib/channels/web";
 import { handleTurn } from "@/lib/conversation/engine";
+import { hasDemoCookie } from "@/lib/demo-access";
 
 export async function POST(req: Request) {
+  if (!hasDemoCookie(req, "hyundai")) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
   let body: unknown;
   try {
     body = await req.json();

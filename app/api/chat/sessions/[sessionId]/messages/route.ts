@@ -3,12 +3,16 @@ import {
   loadMessagesPage,
   sessionExists,
 } from "@/lib/conversation/session";
+import { hasDemoCookie } from "@/lib/demo-access";
 
 export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ sessionId: string }> };
 
 export async function GET(req: Request, ctx: Ctx) {
+  if (!hasDemoCookie(req, "hyundai")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const { sessionId } = await ctx.params;
   if (!(await sessionExists(sessionId))) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
