@@ -10,7 +10,7 @@ describe("huggies page contract", () => {
     expect(chat).toContain("/api/huggies/session");
     expect(chat).toContain("/api/huggies/message");
     expect(chat).toContain("/api/huggies/job");
-    expect(chat).toContain("error_photo_invalid");
-    expect(chat).toContain("error_render");
+    expect(chat).toContain('"mode"');
+    expect(chat).toContain("guide");
   });
 });
