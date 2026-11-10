@@ -25,13 +25,14 @@ async function say(session: Session, text: string, d = deps()) {
   return applyTurn(session, { type: "text", text }, d);
 }
 
-async function toConfirm(ai = false) {
+async function toConfirm(enableExtract = false) {
   let s = freshSession({
     id: "s1",
     scenario: "success",
-    ai,
+    mode: "flow",
     termsVersion: "huggies-video-2026-11",
   });
+  if (!enableExtract) s.ai = false;
   for (const text of ["1", "1", "Bin", "Bin", "1", "2", "1"]) {
     s = (await say(s, text)).session;
   }
@@ -61,7 +62,7 @@ describe("huggies machine", () => {
     let s = freshSession({
       id: "s1",
       scenario: "success",
-      ai: true,
+      mode: "flow",
       termsVersion: "huggies-video-2026-11",
     });
     s = (await say(s, "1")).session;
@@ -87,7 +88,7 @@ describe("huggies machine", () => {
     let s = freshSession({
       id: "s1",
       scenario: "success",
-      ai: true,
+      mode: "flow",
       termsVersion: "huggies-video-2026-11",
     });
     s = (await say(s, "1")).session;
@@ -102,21 +103,68 @@ describe("huggies machine", () => {
     expect(out.messages.join(" ")).not.toContain("dạ");
   });
 
-  it("keeps the step when extract throws", async () => {
+  it("re-asks the step when extract throws on a multi-field sentence", async () => {
     const extract = vi.fn(async () => {
       throw new Error("bad json");
     });
     let s = freshSession({
       id: "s1",
       scenario: "success",
-      ai: true,
+      mode: "flow",
       termsVersion: "huggies-video-2026-11",
     });
     s = (await say(s, "1")).session;
     s = (await say(s, "1")).session;
-    const out = await applyTurn(s, { type: "text", text: "Bin" }, deps({ extract }));
+    const out = await applyTurn(
+      s,
+      { type: "text", text: "bé nhà mình tên Bin, con trai" },
+      deps({ extract }),
+    );
+    expect(extract).toHaveBeenCalled();
     expect(out.session.step).toBe("baby_name");
     expect(out.session.fields.babyName).toBeNull();
+    expect(out.messages.join(" ")).not.toMatch(/chưa nghe rõ/i);
+    expect(out.messages.join(" ")).toMatch(/tên/i);
+  });
+
+  it("skips LLM for a bare baby name like Téo", async () => {
+    const extract = vi.fn(async () => {
+      throw new Error("should not run");
+    });
+    let s = freshSession({
+      id: "s1",
+      scenario: "success",
+      mode: "flow",
+      termsVersion: "huggies-video-2026-11",
+    });
+    s = (await say(s, "1")).session;
+    s = (await say(s, "1")).session;
+    const out = await applyTurn(s, { type: "text", text: "Téo" }, deps({ extract }));
+    expect(extract).not.toHaveBeenCalled();
+    expect(out.session.fields.babyName).toBe("Téo");
+    expect(out.session.step).toBe("display_name");
+  });
+
+  it("treats oke nha / đồng ý as keep on display_name without re-asking", async () => {
+    const extract = vi.fn(async () => {
+      throw new Error("should not run");
+    });
+    let s = freshSession({
+      id: "s1",
+      scenario: "success",
+      mode: "flow",
+      termsVersion: "huggies-video-2026-11",
+    });
+    s = (await say(s, "1")).session;
+    s = (await say(s, "1")).session;
+    s = (await say(s, "Tủn")).session;
+    expect(s.step).toBe("display_name");
+    const out = await applyTurn(s, { type: "text", text: "oke nha" }, deps({ extract }));
+    expect(extract).not.toHaveBeenCalled();
+    expect(out.session.fields.displayName).toBe("Tủn");
+    expect(out.session.step).toBe("gender");
+    expect(out.messages.join(" ")).toMatch(/Tủn/);
+    expect(out.messages.join(" ")).not.toMatch(/Vui lòng cho mình biết tên bé/i);
   });
 
   it("creates one job and one stable video url", async () => {
@@ -143,9 +191,10 @@ describe("huggies machine", () => {
     let s = freshSession({
       id: "s1",
       scenario: "error_photo_invalid",
-      ai: false,
+      mode: "flow",
       termsVersion: "huggies-video-2026-11",
     });
+    s.ai = false;
     for (const text of ["1", "1", "Bin", "Bin", "1", "2", "1"]) {
       s = (await say(s, text)).session;
     }
@@ -166,9 +215,10 @@ describe("huggies machine", () => {
     let s = freshSession({
       id: "s1",
       scenario: "success",
-      ai: false,
+      mode: "flow",
       termsVersion: "huggies-video-2026-11",
     });
+    s.ai = false;
     for (const text of ["1", "1", "Bin", "Bin", "1", "2", "1"]) {
       s = (await say(s, text)).session;
     }
@@ -187,6 +237,7 @@ describe("huggies machine", () => {
 
   it("fails render twice on retry and then removes retry", async () => {
     let s = await toConfirm();
+    s.channel = "messenger";
     s.scenario = "error_render";
     s = (await applyTurn(s, { type: "text", text: "1" }, deps())).session;
     const clock = { t: 1_700_000_000_000 + 3000 };
@@ -204,6 +255,25 @@ describe("huggies machine", () => {
     expect(out.session.job?.errorCode).toBe("render_fail");
     expect(out.buttons.map((b) => b.id)).not.toContain("retry");
     expect(out.buttons.map((b) => b.id)).toContain("cs");
+  });
+
+  it("zalo surface embeds numbered options and hides buttons", async () => {
+    const { promptFor } = await import("@/lib/huggies/copy");
+    const s = freshSession({
+      id: "z1",
+      scenario: "success",
+      channel: "zalo",
+      mode: "flow",
+      termsVersion: "huggies-video-2026-11",
+    });
+    s.ai = false;
+    const welcome = promptFor(s);
+    expect(welcome.buttons).toEqual([]);
+    expect(welcome.text).toMatch(/1\.\s*.*Bắt đầu/);
+    const consent = await say(s, "1");
+    expect(consent.buttons).toEqual([]);
+    expect(consent.messages.join("\n")).toMatch(/1\.\s*.*Đồng ý/);
+    expect(consent.messages.join("\n")).toMatch(/2\.\s*.*điều khoản/i);
   });
 
   it("reports an empty video list without a url", async () => {

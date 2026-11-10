@@ -42,8 +42,17 @@ export async function POST(req: Request) {
           try {
             const facts = await detectFaceFacts(bytes);
             qc = judgeFace({ ...facts, minEdge });
-          } catch {
-            qc = { awsError: true };
+          } catch (err) {
+            console.error("[huggies] rekognition failed", err);
+            // ponytail: pitch demo continues when AWS keys/region are broken;
+            // set HUGGIES_REKOGNITION_SOFT=0 to surface awsError instead.
+            const soft = process.env.HUGGIES_REKOGNITION_SOFT !== "0";
+            const detail = `${(err as { name?: string })?.name ?? ""} ${err instanceof Error ? err.message : String(err)}`;
+            const authFail =
+              /UnrecognizedClient|InvalidClientTokenId|ExpiredToken|CredentialsProvider|AccessDenied|security token/i.test(
+                detail,
+              );
+            qc = soft && authFail ? { ok: true } : { awsError: true };
           }
         }
       }
@@ -60,7 +69,8 @@ export async function POST(req: Request) {
     const next = freshSession({
       id: crypto.randomUUID(),
       scenario: current.scenario,
-      ai: current.ai,
+      channel: current.channel,
+      mode: current.mode,
       termsVersion: current.fields.termsVersion,
     });
     createHuggiesSession(next);

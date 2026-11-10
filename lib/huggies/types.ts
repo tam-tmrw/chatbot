@@ -15,6 +15,10 @@ export type StepId =
   | "end";
 
 export type Scenario = "success" | "error_photo_invalid" | "error_render";
+/** Web pitch surface only — not a live Zalo/Messenger wire. */
+export type DemoChannel = "zalo" | "messenger";
+export type DemoMode = "flow" | "guide";
+export type GuideMessage = { role: "user" | "assistant"; content: string };
 export type Gender = "boy" | "girl" | "unspecified";
 export type AgeRange = "<1" | "1-2" | "2-3" | ">3";
 export type HobbyId =
@@ -82,6 +86,10 @@ export type Job = {
 export type Session = {
   id: string;
   scenario: Scenario;
+  channel: DemoChannel;
+  mode: DemoMode;
+  guideHistory: GuideMessage[];
+  /** true iff mode === "flow" */
   ai: boolean;
   step: StepId;
   fields: Fields;

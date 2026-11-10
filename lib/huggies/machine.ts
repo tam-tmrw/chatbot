@@ -1,8 +1,9 @@
 import { foldVn } from "@/lib/conversation/flow";
-import { promptFor, qcUserCopy } from "@/lib/huggies/copy";
+import { ackFor, gentleHint, promptFor, qcUserCopy } from "@/lib/huggies/copy";
 import type {
   AgeRange,
-  Button,
+  DemoChannel,
+  DemoMode,
   Extracted,
   Gender,
   HobbyId,
@@ -15,6 +16,7 @@ import type {
 } from "@/lib/huggies/types";
 import {
   HOBBIES,
+  isAffirmative,
   parseAgeToken,
   parseBabyName,
   parseDisplayName,
@@ -40,7 +42,7 @@ export type MachineDeps = {
   previewUrl: string | null;
   learnMoreUrl: string;
   termsUrl: string;
-  extract?: (step: StepId, text: string) => Promise<Extracted>;
+  extract?: (step: StepId, text: string, session: Session) => Promise<Extracted>;
 };
 
 const COLLECT: StepId[] = [
@@ -54,14 +56,19 @@ const COLLECT: StepId[] = [
 
 export function freshSession(input: {
   id: string;
-  scenario: Scenario;
-  ai: boolean;
+  scenario?: Scenario;
+  channel?: DemoChannel;
+  mode?: DemoMode;
   termsVersion: string;
 }): Session {
+  const mode = input.mode ?? "flow";
   return {
     id: input.id,
-    scenario: input.scenario,
-    ai: input.ai,
+    scenario: input.scenario ?? "success",
+    channel: input.channel ?? "zalo",
+    mode,
+    ai: mode === "flow",
+    guideHistory: [],
     step: "welcome",
     fields: {
       consent: false,
@@ -94,27 +101,24 @@ function nextIncomplete(session: Session): StepId {
   return "confirm";
 }
 
-function errorButtons(session: Session): Button[] {
-  const buttons: Button[] = [];
-  if (session.job?.errorCode === "render_fail" && session.job.retries < 2) {
-    buttons.push({ id: "retry", label: "Thử lại" });
-  }
-  buttons.push({ id: "cs", label: "Gặp tư vấn viên" });
-  buttons.push({ id: "end", label: "Kết thúc" });
-  return buttons;
-}
-
 function view(session: Session, extra: Partial<TurnResult> = {}): TurnResult {
   const prompt = promptFor(session);
   return {
     session,
     messages: extra.messages ?? [prompt.text],
-    buttons:
-      extra.buttons ??
-      (session.step === "error" ? errorButtons(session) : prompt.buttons),
+    buttons: extra.buttons ?? prompt.buttons,
     jobId: session.job?.id ?? null,
     restart: extra.restart ?? false,
   };
+}
+
+function advanceView(session: Session, fromStep: StepId): TurnResult {
+  const prompt = promptFor(session);
+  const ack = ackFor(fromStep, session);
+  return view(session, {
+    messages: ack ? [`${ack}\n\n${prompt.text}`] : [prompt.text],
+    buttons: prompt.buttons,
+  });
 }
 
 function norm(text?: string): string {
@@ -275,7 +279,11 @@ function applyRigid(session: Session, input: TurnInput, deps: MachineDeps): Turn
         input.buttonId === "start" || t === "1" || t === "bat dau" || t === "choi";
       if (!start) {
         return view(session, {
-          messages: ["Ba mẹ bấm Bắt đầu hoặc gõ 1 giúp mình nhé."],
+          messages: [
+            session.channel === "messenger"
+              ? "Ba mẹ bấm Bắt đầu hoặc gõ 1 giúp mình nhé."
+              : "Ba mẹ gõ 1 để bắt đầu giúp mình nhé.",
+          ],
         });
       }
       session.step = "consent";
@@ -311,47 +319,75 @@ function applyRigid(session: Session, input: TurnInput, deps: MachineDeps): Turn
     }
     case "baby_name": {
       const name = parseBabyName(input.text ?? "");
-      if (!name) return view(session);
+      if (!name) {
+        return view(session, { messages: [gentleHint("baby_name")] });
+      }
+      const from = session.step;
       session.fields.babyName = name;
       go(session, "display_name");
-      return view(session);
+      return advanceView(session, from);
     }
     case "display_name": {
-      if (
-        input.buttonId === "keep" &&
-        session.fields.babyName &&
-        session.fields.babyName.length <= 12
-      ) {
-        session.fields.displayName = session.fields.babyName;
+      const squeezed = (session.fields.babyName ?? "").replace(/\s+/g, "").slice(0, 12);
+      const keep =
+        (input.buttonId === "keep" ||
+          t === "1" ||
+          t === "giu" ||
+          t === "giu ten nay" ||
+          isAffirmative(input.text ?? "")) &&
+        squeezed.length >= 2;
+      if (keep) {
+        const from = session.step;
+        session.fields.displayName = squeezed;
         go(session, "gender");
-        return view(session);
+        return advanceView(session, from);
       }
       const name = parseDisplayName(input.text ?? "");
-      if (!name) return view(session);
-      session.fields.displayName = name;
-      go(session, "gender");
-      return view(session);
+      if (!name) {
+        return view(session, { messages: [gentleHint("display_name")] });
+      }
+      {
+        const from = session.step;
+        session.fields.displayName = name;
+        go(session, "gender");
+        return advanceView(session, from);
+      }
     }
     case "gender": {
       const gender = genderOf(input);
-      if (!gender) return view(session);
-      session.fields.gender = gender;
-      go(session, "age_range");
-      return view(session);
+      if (!gender) {
+        return view(session, { messages: [gentleHint("gender")] });
+      }
+      {
+        const from = session.step;
+        session.fields.gender = gender;
+        go(session, "age_range");
+        return advanceView(session, from);
+      }
     }
     case "age_range": {
       const age = ageOf(input);
-      if (!age) return view(session);
-      session.fields.ageRange = age;
-      go(session, "hobby");
-      return view(session);
+      if (!age) {
+        return view(session, { messages: [gentleHint("age_range")] });
+      }
+      {
+        const from = session.step;
+        session.fields.ageRange = age;
+        go(session, "hobby");
+        return advanceView(session, from);
+      }
     }
     case "hobby": {
       const hobby = hobbyOf(input);
-      if (!hobby) return view(session);
-      session.fields.hobby = hobby;
-      go(session, "photo");
-      return view(session);
+      if (!hobby) {
+        return view(session, { messages: [gentleHint("hobby")] });
+      }
+      {
+        const from = session.step;
+        session.fields.hobby = hobby;
+        go(session, "photo");
+        return advanceView(session, from);
+      }
     }
     case "photo": {
       if (input.type !== "image") {
@@ -361,7 +397,9 @@ function applyRigid(session: Session, input: TurnInput, deps: MachineDeps): Turn
       }
       if (!input.qc || "awsError" in input.qc) {
         return view(session, {
-          messages: ["Mình chưa kiểm tra được ảnh. Ba mẹ gửi lại giúp mình nhé."],
+          messages: [
+            "Mình chưa kiểm tra được ảnh (lỗi dịch vụ nhận diện). Ba mẹ gửi lại hoặc thử ảnh JPG/PNG khác giúp mình nhé.",
+          ],
         });
       }
       if (!input.qc.ok) return failPhoto(session, input.qc.reason);
@@ -382,10 +420,21 @@ function applyRigid(session: Session, input: TurnInput, deps: MachineDeps): Turn
         edit_age: "age_range",
         edit_hobby: "hobby",
       };
-      if (input.buttonId && editTo[input.buttonId]) {
-        session.returnTo = "confirm";
-        session.editMenu = false;
-        session.step = editTo[input.buttonId];
+      if (session.editMenu) {
+        const byNum: Record<string, string> = {
+          "1": "edit_name",
+          "2": "edit_display",
+          "3": "edit_gender",
+          "4": "edit_age",
+          "5": "edit_hobby",
+        };
+        const pick = input.buttonId ?? byNum[t];
+        if (pick && editTo[pick]) {
+          session.returnTo = "confirm";
+          session.editMenu = false;
+          session.step = editTo[pick];
+          return view(session);
+        }
         return view(session);
       }
       if (input.buttonId === "edit_photo" || t === "3") {
@@ -400,28 +449,28 @@ function applyRigid(session: Session, input: TurnInput, deps: MachineDeps): Turn
         session.editMenu = true;
         return view(session);
       }
-      if (input.buttonId === "confirm" || t === "1") return confirmJob(session, deps);
-      return view(session);
+      if (input.buttonId === "confirm" || t === "1" || isAffirmative(input.text ?? "")) {
+        return confirmJob(session, deps);
+      }
+      return view(session, { messages: [gentleHint("confirm")] });
     }
     case "error": {
-      if (
-        (input.buttonId === "retry" || t === "1") &&
-        session.job?.errorCode === "render_fail" &&
-        session.job.retries < 2
-      ) {
-        session.job.retries += 1;
-        session.job.status = "processing";
-        session.job.errorCode = null;
-        session.job.readyAt = deps.now() + deps.delayMs;
-        session.job.announced = false;
+      const canRetry =
+        session.job?.errorCode === "render_fail" && (session.job?.retries ?? 0) < 2;
+      if ((input.buttonId === "retry" || t === "1") && canRetry) {
+        session.job!.retries += 1;
+        session.job!.status = "processing";
+        session.job!.errorCode = null;
+        session.job!.readyAt = deps.now() + deps.delayMs;
+        session.job!.announced = false;
         session.step = "processing";
         return view(session);
       }
-      if (input.buttonId === "cs" || t === "2") {
+      if (input.buttonId === "cs" || t === "2" || (!canRetry && t === "1")) {
         session.step = "cs";
         return view(session);
       }
-      if (input.buttonId === "end" || t === "3") {
+      if (input.buttonId === "end" || t === "3" || (!canRetry && t === "2")) {
         session.step = "end";
         return view(session);
       }
@@ -444,6 +493,25 @@ function applyRigid(session: Session, input: TurnInput, deps: MachineDeps): Turn
   }
 }
 
+/** Skip LLM when the typed answer already fits the current step (faster + no timeout flake). */
+function skipAiFor(step: StepId, text: string): boolean {
+  const t = text.trim();
+  if (step === "display_name" && isAffirmative(t)) return true;
+  if (step === "confirm" && (isAffirmative(t) || /^\d{1,2}$/.test(t))) return true;
+  if (step === "gender" || step === "age_range" || step === "hobby" || step === "confirm") {
+    return /^\d{1,2}$/.test(t);
+  }
+  if (step === "baby_name" || step === "display_name") {
+    if (/,| và /i.test(t)) return false;
+    const words = t.split(/\s+/).filter(Boolean);
+    if (words.length > 2) return false;
+    return step === "baby_name"
+      ? parseBabyName(t) != null
+      : parseDisplayName(t) != null;
+  }
+  return false;
+}
+
 export async function applyTurn(
   inputSession: Session,
   input: TurnInput,
@@ -451,25 +519,34 @@ export async function applyTurn(
 ): Promise<TurnResult> {
   const session = structuredClone(inputSession);
   if (
+    session.mode === "flow" &&
     session.ai &&
     deps.extract &&
     input.type === "text" &&
     input.text &&
-    COLLECT.includes(session.step)
+    COLLECT.includes(session.step) &&
+    !skipAiFor(session.step, input.text)
   ) {
     try {
-      const extracted = await deps.extract(session.step, input.text);
+      const from = session.step;
+      const extracted = await deps.extract(session.step, input.text, session);
       const applied = applyExtracted(session, extracted);
       if (session.step === "confirm" && extracted.confirm) return confirmJob(session, deps);
       if (applied && session.step !== "confirm") {
         session.step = nextIncomplete(session);
         session.editMenu = false;
-        return view(session);
+        return advanceView(session, from);
       }
-      if (!applied && extracted.reply) return view(session, { messages: [extracted.reply] });
+      if (!applied) {
+        // one soft tip only — avoid stacking tip + full form prompt (feels like a wall)
+        return view(session, {
+          messages: [extracted.reply ?? gentleHint(session.step)],
+        });
+      }
     } catch {
+      // LLM timeout / bad JSON → soft Vietnamese re-ask
       return view(session, {
-        messages: ["Mình chưa nghe rõ. Ba mẹ chọn nút hoặc gõ số giúp mình nhé."],
+        messages: [gentleHint(session.step)],
       });
     }
   }
@@ -482,7 +559,7 @@ export function settle(inputSession: Session, deps: MachineDeps): TurnResult {
     return {
       session,
       messages: [],
-      buttons: session.step === "error" ? errorButtons(session) : [],
+      buttons: [],
       jobId: session.job?.id ?? null,
       restart: false,
     };
