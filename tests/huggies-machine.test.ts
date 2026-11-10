@@ -255,6 +255,16 @@ describe("huggies machine", () => {
     expect(out.buttons.map((b) => b.id)).toContain("cs");
   });
 
+  it("guide welcome is free-text without numbered start", async () => {
+    const { promptFor } = await import("@/lib/huggies/copy");
+    const { freshSession } = await import("@/lib/huggies/machine");
+    const s = freshSession({ id: "gw", mode: "guide", termsVersion: "t" });
+    const p = promptFor(s);
+    expect(p.text).not.toMatch(/gõ số|1\.\s/);
+    expect(p.text).toMatch(/Huggies|ba mẹ/i);
+    expect(p.buttons).toEqual([]);
+  });
+
   it("zalo surface embeds numbered options and hides buttons", async () => {
     const { promptFor } = await import("@/lib/huggies/copy");
     const s = freshSession({

@@ -13,7 +13,7 @@ function baseDeps(over: Partial<GuideDeps> = {}): GuideDeps {
     pickVideo: (u) => u[0],
     previewUrl: null,
     learnMoreUrl: "#",
-    termsUrl: "#",
+    termsUrl: "https://terms.example",
   };
   return {
     ...machine,
@@ -88,6 +88,49 @@ describe("applyGuideTurn", () => {
     );
     expect(out.messages.join(" ")).not.toMatch(/please|provide/i);
     expect(out.messages.join(" ")).toMatch(/điều khoản|đồng ý|Ba mẹ/i);
+    expect(out.messages.join("\n")).toContain("https://terms.example");
+  });
+
+  it("answers terms questions with URL and stays on consent", async () => {
+    const s = freshSession({ id: "g-terms", mode: "guide", termsVersion: "t" });
+    const chat = vi.fn(async () => "{}");
+    const out = await applyGuideTurn(
+      s,
+      { type: "text", text: "điều khoản gì vậy" },
+      baseDeps({ guideChat: chat, termsUrl: "https://terms.example/tc" }),
+    );
+    expect(chat).not.toHaveBeenCalled();
+    expect(out.session.fields.consent).toBe(false);
+    expect(out.session.step).toBe("consent");
+    expect(out.messages.join("\n")).toContain("https://terms.example/tc");
+    expect(out.messages.join("\n")).toMatch(/đồng ý/i);
+  });
+
+  it("after photo uses full confirm summary", async () => {
+    let s = freshSession({ id: "g-sum", mode: "guide", termsVersion: "t" });
+    s.fields = {
+      consent: true,
+      consentAt: "t",
+      termsVersion: "t",
+      babyName: "Tủn",
+      displayName: "Tun",
+      gender: "boy",
+      ageRange: "1-2",
+      hobby: "cars",
+      photoOk: false,
+    };
+    s.step = "photo";
+    const out = await applyGuideTurn(
+      s,
+      { type: "image", qc: { ok: true } },
+      baseDeps(),
+    );
+    expect(out.session.step).toBe("confirm");
+    const msg = out.messages.join("\n");
+    expect(msg).toMatch(/Tủn/);
+    expect(msg).toMatch(/Tun/);
+    expect(msg).toMatch(/Xe hơi/);
+    expect(msg).toMatch(/xác nhận|tạo video/i);
   });
 
   it("starts job on confirm after photoOk", async () => {

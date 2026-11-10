@@ -123,6 +123,13 @@ export function promptFor(session: Session): { text: string; buttons: Button[] }
   const ch: DemoChannel = session.channel ?? "zalo";
   switch (session.step) {
     case "welcome":
+      if (session.mode === "guide") {
+        return {
+          text:
+            "Xin chào ba mẹ! Mình là trợ lý Huggies — mình sẽ hỏi vài thông tin ngắn (trả lời tự nhiên giúp mình), rồi cùng tạo video nhảy đáng yêu cho bé nhé.\nBa mẹ nhắn “bắt đầu” hoặc cứ hỏi/trả lời để mình hỗ trợ ạ.",
+          buttons: [],
+        };
+      }
       return surface(
         ch,
         "Xin chào ba mẹ! Mình là trợ lý Huggies — mình sẽ hỏi vài thông tin ngắn rồi cùng tạo video nhảy đáng yêu cho bé nhé.",

@@ -1,7 +1,10 @@
 import { foldVn } from "@/lib/conversation/flow";
 import { sanitizeReply } from "@/lib/huggies/ai";
 import {
+  confirmSummary,
+  consentPrompt,
   firstMissingHint,
+  looksLikeTermsAsk,
   textFieldsComplete,
 } from "@/lib/huggies/checklist";
 import { qcUserCopy } from "@/lib/huggies/copy";
@@ -90,13 +93,13 @@ function mergeGuideFields(session: Session, raw: GuideLlmResult["fields"], userT
   }
 }
 
-function systemPrompt(session: Session): string {
+function systemPrompt(session: Session, termsUrl: string): string {
   return `Bạn là trợ lý Huggies (tiếng Việt, thân thiện). Thu thập: consent, babyName, displayName (≤12, không space), gender, ageRange, hobby rồi ảnh (UI riêng), rồi confirm tạo video.
 Trả ĐÚNG một JSON: { "reply": string, "fields": {...}|{}, "exit": boolean, "readyForPhoto": boolean, "confirm": boolean }.
 CẤM tiếng Anh trong reply. Không bịa field. Nếu user muốn dừng → exit=true.
 Khi đủ field text → readyForPhoto=true. Khi đã có ảnh và user đồng ý tạo → confirm=true.
 Fields hiện tại: ${JSON.stringify(session.fields)}
-Missing hint: ${firstMissingHint(session.fields)}`;
+Missing hint: ${firstMissingHint(session.fields, { termsUrl })}`;
 }
 
 async function callGuideLlm(session: Session, userText: string, deps: GuideDeps): Promise<GuideLlmResult> {
@@ -107,7 +110,7 @@ async function callGuideLlm(session: Session, userText: string, deps: GuideDeps)
   });
   try {
     const messages = [
-      { role: "system" as const, content: systemPrompt(session) },
+      { role: "system" as const, content: systemPrompt(session, deps.termsUrl) },
       ...session.guideHistory.map((m) => ({
         role: m.role as "user" | "assistant",
         content: m.content,
@@ -151,7 +154,7 @@ export async function applyGuideTurn(
 
   if (input.type === "image") {
     if (!textFieldsComplete(session.fields) || session.step !== "photo") {
-      const msg = `Mình cần vài thông tin trước khi nhận ảnh ạ.\n${firstMissingHint(session.fields)}`;
+      const msg = `Mình cần vài thông tin trước khi nhận ảnh ạ.\n${firstMissingHint(session.fields, { termsUrl: deps.termsUrl })}`;
       pushHistory(session, "assistant", msg);
       return viewGuide(session, [msg]);
     }
@@ -167,15 +170,15 @@ export async function applyGuideTurn(
     }
     session.fields.photoOk = true;
     session.step = "confirm";
-    const msg =
-      "Ảnh đẹp rồi ạ! Mình tóm tắt: " +
-      `${session.fields.babyName} / ${session.fields.displayName}. Ba mẹ xác nhận tạo video nhé?`;
+    const msg = confirmSummary(session.fields);
     pushHistory(session, "assistant", msg);
     return viewGuide(session, [msg]);
   }
 
   const userText = (input.text ?? "").trim() || (input.buttonId ?? "");
-  if (!userText) return viewGuide(session, [firstMissingHint(session.fields)]);
+  if (!userText) {
+    return viewGuide(session, [firstMissingHint(session.fields, { termsUrl: deps.termsUrl })]);
+  }
   pushHistory(session, "user", userText);
 
   if (looksLikeExit(userText)) {
@@ -188,11 +191,18 @@ export async function applyGuideTurn(
     return startVideoJob(session, deps);
   }
 
+  if (!session.fields.consent && looksLikeTermsAsk(userText) && !userConsents(userText)) {
+    const msg = consentPrompt(deps.termsUrl);
+    session.step = "consent";
+    pushHistory(session, "assistant", msg);
+    return viewGuide(session, [msg]);
+  }
+
   let parsed: GuideLlmResult;
   try {
     parsed = await callGuideLlm(session, userText, deps);
   } catch {
-    const msg = `Mình chưa nghe rõ ạ.\n${firstMissingHint(session.fields)}`;
+    const msg = `Mình chưa nghe rõ ạ.\n${firstMissingHint(session.fields, { termsUrl: deps.termsUrl })}`;
     pushHistory(session, "assistant", msg);
     return viewGuide(session, [msg]);
   }
@@ -220,13 +230,14 @@ export async function applyGuideTurn(
   }
 
   const reply =
-    sanitizeReply(parsed.reply) ?? firstMissingHint(session.fields);
+    sanitizeReply(parsed.reply) ?? firstMissingHint(session.fields, { termsUrl: deps.termsUrl });
+  const hint = firstMissingHint(session.fields, { termsUrl: deps.termsUrl });
   const withHint =
     textFieldsComplete(session.fields)
       ? reply
       : reply.includes("?")
         ? reply
-        : `${reply}\n${firstMissingHint(session.fields)}`;
+        : `${reply}\n${hint}`;
   if (!session.fields.consent) session.step = "consent";
   else if (!session.fields.babyName) session.step = "baby_name";
   else if (!session.fields.displayName) session.step = "display_name";
