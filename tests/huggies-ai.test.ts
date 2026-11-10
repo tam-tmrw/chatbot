@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractFields } from "@/lib/huggies/ai";
+import { extractFields, sanitizeReply } from "@/lib/huggies/ai";
 import type { LlmProvider } from "@/lib/llm";
 
 function llm(reply: string | Promise<string>): LlmProvider {
@@ -31,5 +31,17 @@ describe("extractFields", () => {
     await expect(
       extractFields(llm("xin lỗi mình không hiểu"), "baby_name", "???"),
     ).rejects.toThrow();
+  });
+
+  it("drops English reply crumbs from the model", async () => {
+    expect(sanitizeReply("Please provide the baby name.")).toBeNull();
+    expect(sanitizeReply("Ba mẹ gõ tên bé giúp mình nhé — ví dụ Bin.")).toMatch(/Bin/);
+    const out = await extractFields(
+      llm('{"babyName":null,"reply":"Please provide the baby\'s name."}'),
+      "baby_name",
+      "sao vậy",
+    );
+    expect(out.reply).toBeUndefined();
+    expect(out.babyName).toBeUndefined();
   });
 });

@@ -1,6 +1,11 @@
 import type { Session } from "@/lib/huggies/types";
 
-const sessions = new Map<string, Session>();
+// ponytail: demo in-memory only; globalThis so Next HMR / dual route bundles share one Map
+const g = globalThis as typeof globalThis & {
+  __huggiesSessions?: Map<string, Session>;
+};
+const sessions = g.__huggiesSessions ?? new Map<string, Session>();
+g.__huggiesSessions = sessions;
 
 export function resetHuggiesStore(): void {
   sessions.clear();

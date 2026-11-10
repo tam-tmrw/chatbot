@@ -3,6 +3,7 @@ import { imageMinEdge } from "@/lib/huggies/image";
 import { judgeFace, QC_THRESHOLDS } from "@/lib/huggies/qc";
 import type { FaceFacts } from "@/lib/huggies/types";
 import {
+  isAffirmative,
   parseAgeToken,
   parseBabyName,
   parseDisplayName,
@@ -27,8 +28,15 @@ describe("huggies rules", () => {
     expect(parseBabyName("  Bin  ")).toBe("Bin");
     expect(parseBabyName("https://x")).toBeNull();
     expect(parseBabyName("😀")).toBeNull();
+    expect(parseBabyName("no")).toBeNull();
+    expect(parseBabyName("không")).toBeNull();
+    expect(parseBabyName("ok")).toBeNull();
     expect(parseDisplayName("Bình An nè")).toBeNull();
     expect(parseDisplayName("Bin")).toBe("Bin");
+    expect(parseDisplayName("no")).toBeNull();
+    expect(isAffirmative("oke nha")).toBe(true);
+    expect(isAffirmative("đồng ý")).toBe(true);
+    expect(isAffirmative("Cu đất")).toBe(false);
     expect(parseGenderToken("2")).toBe("girl");
     expect(parseAgeToken("2")).toBe("1-2");
     expect(parseHobbyToken("1")).toBe("cars");
