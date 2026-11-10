@@ -50,7 +50,6 @@ describe("huggies API", () => {
         channel: "messenger",
         mode: "guide",
         scenario: "error_render",
-        ai: false,
       }),
     );
     expect(res.status).toBe(200);
