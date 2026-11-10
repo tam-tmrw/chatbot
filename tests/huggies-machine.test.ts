@@ -25,29 +25,29 @@ async function say(session: Session, text: string, d = deps()) {
   return applyTurn(session, { type: "text", text }, d);
 }
 
-async function toConfirm(enableExtract = false) {
+async function toConfirm() {
   let s = freshSession({
     id: "s1",
     scenario: "success",
     mode: "flow",
     termsVersion: "huggies-video-2026-11",
   });
-  if (!enableExtract) s.ai = false;
+  const rigid = deps({ extract: undefined });
   for (const text of ["1", "1", "Bin", "Bin", "1", "2", "1"]) {
-    s = (await say(s, text)).session;
+    s = (await say(s, text, rigid)).session;
   }
   const photo = await applyTurn(
     s,
     { type: "image", qc: { ok: true } },
-    deps(),
+    rigid,
   );
   expect(photo.session.step).toBe("confirm");
   return photo.session;
 }
 
 describe("huggies machine", () => {
-  it("walks ai=off from welcome to confirm with numbers", async () => {
-    const session = await toConfirm(false);
+  it("walks flow rigid path from welcome to confirm with numbers", async () => {
+    const session = await toConfirm();
     expect(session.fields.babyName).toBe("Bin");
     expect(session.fields.gender).toBe("boy");
     expect(session.fields.hobby).toBe("cars");
@@ -194,7 +194,6 @@ describe("huggies machine", () => {
       mode: "flow",
       termsVersion: "huggies-video-2026-11",
     });
-    s.ai = false;
     for (const text of ["1", "1", "Bin", "Bin", "1", "2", "1"]) {
       s = (await say(s, text)).session;
     }
@@ -218,7 +217,6 @@ describe("huggies machine", () => {
       mode: "flow",
       termsVersion: "huggies-video-2026-11",
     });
-    s.ai = false;
     for (const text of ["1", "1", "Bin", "Bin", "1", "2", "1"]) {
       s = (await say(s, text)).session;
     }
@@ -266,7 +264,6 @@ describe("huggies machine", () => {
       mode: "flow",
       termsVersion: "huggies-video-2026-11",
     });
-    s.ai = false;
     const welcome = promptFor(s);
     expect(welcome.buttons).toEqual([]);
     expect(welcome.text).toMatch(/1\.\s*.*Bắt đầu/);
