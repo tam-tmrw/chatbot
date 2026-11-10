@@ -116,4 +116,76 @@ describe("applyGuideTurn", () => {
     expect(out.session.step).toBe("processing");
     expect(out.jobId).toBe("job_1");
   });
+
+  it("does not set consent on negation", async () => {
+    const s = freshSession({ id: "g6", mode: "guide", termsVersion: "t" });
+    const out = await applyGuideTurn(
+      s,
+      { type: "text", text: "không đồng ý" },
+      baseDeps({ guideChat: vi.fn(async () => JSON.stringify({ reply: "Dạ vâng ạ.", fields: { consent: true } })) }),
+    );
+    expect(out.session.fields.consent).toBe(false);
+    const out2 = await applyGuideTurn(
+      s,
+      { type: "text", text: "chưa đồng ý" },
+      baseDeps(),
+    );
+    expect(out2.session.fields.consent).toBe(false);
+  });
+
+  it("ignores LLM-only consent on an unrelated message", async () => {
+    const s = freshSession({ id: "g7", mode: "guide", termsVersion: "t" });
+    const out = await applyGuideTurn(s, { type: "text", text: "bé tên Bin" }, baseDeps());
+    expect(out.session.fields.consent).toBe(false);
+    expect(out.session.step).toBe("consent");
+  });
+
+  it("sets consent on explicit agreement text", async () => {
+    const s = freshSession({ id: "g8", mode: "guide", termsVersion: "t" });
+    const out = await applyGuideTurn(s, { type: "text", text: "đồng ý" }, baseDeps());
+    expect(out.session.fields.consent).toBe(true);
+  });
+
+  it("stays ended after step=end (no checklist revival, no LLM call)", async () => {
+    const s = freshSession({ id: "g9", mode: "guide", termsVersion: "t" });
+    s.step = "end";
+    const guideChat = vi.fn(async () => "{}");
+    const out = await applyGuideTurn(s, { type: "text", text: "đồng ý" }, baseDeps({ guideChat }));
+    expect(out.session.step).toBe("end");
+    expect(guideChat).not.toHaveBeenCalled();
+    expect(out.messages.join(" ")).toMatch(/Cảm ơn/);
+  });
+
+  it("delegates result-step replay and learn to the machine", async () => {
+    const s = freshSession({ id: "g10", mode: "guide", termsVersion: "t" });
+    s.step = "result";
+    const replay = await applyGuideTurn(s, { type: "button", buttonId: "replay" }, baseDeps());
+    expect(replay.restart).toBe(true);
+    const learn = await applyGuideTurn(s, { type: "button", buttonId: "learn" }, baseDeps());
+    expect(learn.messages).toEqual(["#"]);
+  });
+
+  it("does not end when the LLM reply merely contains an exit word", async () => {
+    const s = freshSession({ id: "g11", mode: "guide", termsVersion: "t" });
+    const out = await applyGuideTurn(
+      s,
+      { type: "text", text: "bé tên Bin" },
+      baseDeps({
+        guideChat: vi.fn(async () =>
+          JSON.stringify({ reply: "Để kết thúc, ba mẹ cho mình tên bé nhé?", fields: {} }),
+        ),
+      }),
+    );
+    expect(out.session.step).not.toBe("end");
+  });
+
+  it("exit words in user text need word boundaries", async () => {
+    const s = freshSession({ id: "g12", mode: "guide", termsVersion: "t" });
+    const out = await applyGuideTurn(
+      s,
+      { type: "text", text: "bé tên Bybyebye" },
+      baseDeps({ guideChat: vi.fn(async () => JSON.stringify({ reply: "Ok ạ?" })) }),
+    );
+    expect(out.session.step).not.toBe("end");
+  });
 });

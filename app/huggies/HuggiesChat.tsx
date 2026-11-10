@@ -242,7 +242,7 @@ export function HuggiesChat() {
     (step === "hobby" || step === "age_range" || step === "gender" || step === "consent");
   const showChips = channel === "messenger" && buttons.length > 0;
   const showDropzone = step === "photo" && (channel === "messenger" || mode === "guide");
-  const guidePhotoLocked = mode === "guide" && step !== "photo";
+  const guidePhotoLocked = step !== "photo";
   const showMedia =
     channel === "messenger" && step === "result" && (job?.previewUrl || job?.videoUrl);
   const modeShort = mode === "guide" ? "AI guide" : "Flow";

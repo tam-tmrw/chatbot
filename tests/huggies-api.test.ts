@@ -23,7 +23,7 @@ vi.mock("@/lib/huggies/ai", () => ({
 import { POST as createSession } from "@/app/api/huggies/session/route";
 import { POST as postMessage } from "@/app/api/huggies/message/route";
 import { GET as getJob } from "@/app/api/huggies/job/route";
-import { resetHuggiesStore } from "@/lib/huggies/store";
+import { getHuggiesSession, resetHuggiesStore } from "@/lib/huggies/store";
 
 function authed(url: string, body?: unknown) {
   return new Request(url, {
@@ -37,14 +37,16 @@ function authed(url: string, body?: unknown) {
 }
 
 describe("huggies API", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    const { detectFaceFacts } = await import("@/lib/huggies/rekognition");
+    vi.mocked(detectFaceFacts).mockClear();
     resetHuggiesStore();
     process.env.HUGGIES_DELAY_MS = "0";
     process.env.HUGGIES_VIDEO_URLS = "https://s3.example/a.mp4";
     process.env.HUGGIES_TERMS_VERSION = "huggies-video-2026-11";
   });
 
-  it("creates a flow session with forced success and mode", async () => {
+  it("creates a guide/messenger session with forced success scenario", async () => {
     const res = await createSession(
       authed("http://localhost/api/huggies/session", {
         channel: "messenger",
@@ -58,6 +60,7 @@ describe("huggies API", () => {
     expect(body.channel).toBe("messenger");
     expect(body.sessionId).toBeTruthy();
     expect(body.step).toBe("welcome");
+    expect(getHuggiesSession(body.sessionId)?.scenario).toBe("success");
   });
 
   it("routes guide mode and rejects early photo", async () => {
@@ -78,6 +81,8 @@ describe("huggies API", () => {
       }),
     );
     const body = await photo.json();
+    const { detectFaceFacts } = await import("@/lib/huggies/rekognition");
+    expect(detectFaceFacts).not.toHaveBeenCalled();
     expect(body.mode).toBe("guide");
     expect(body.step).not.toBe("confirm");
     expect(body.messages.join(" ")).toMatch(/trước|thông tin|điều khoản/i);

@@ -23,7 +23,6 @@ export function huggiesDeps(ai: boolean): MachineDeps {
     termsUrl: process.env.HUGGIES_TERMS_URL || "#",
     extract: ai
       ? (step: StepId, text: string, session: Session) => {
-          console.info("[huggies] openai extract", { step, text: text.slice(0, 80) });
           return extractFields(
             getLlmProvider(),
             step,

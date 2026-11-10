@@ -5,7 +5,7 @@ import {
   textFieldsComplete,
 } from "@/lib/huggies/checklist";
 import { qcUserCopy } from "@/lib/huggies/copy";
-import { startVideoJob, type MachineDeps } from "@/lib/huggies/machine";
+import { applyTurn, startVideoJob, type MachineDeps } from "@/lib/huggies/machine";
 import type {
   AgeRange,
   Gender,
@@ -37,6 +37,8 @@ export type GuideDeps = MachineDeps & {
 };
 
 const HISTORY_MAX = 8;
+const END_MSG = "Cảm ơn ba mẹ đã ghé. Khi nào muốn tạo video cho bé, nhắn mình lại nhé.";
+const POST_STEPS = ["result", "error", "cs"];
 
 function pushHistory(session: Session, role: "user" | "assistant", content: string) {
   session.guideHistory = [...session.guideHistory, { role, content }].slice(-HISTORY_MAX);
@@ -44,13 +46,20 @@ function pushHistory(session: Session, role: "user" | "assistant", content: stri
 
 function looksLikeExit(text: string): boolean {
   const t = foldVn(text);
-  return /(khong choi|thoi di|thoi nha|dung lai|ket thuc|stop|bye|exit)/.test(t);
+  return /\b(khong choi|thoi di|thoi nha|dung lai|ket thuc|stop|bye|exit)\b/.test(t);
+}
+
+/** Consent needs affirmative user text (never LLM-only); negation blocks it. */
+function userConsents(text: string): boolean {
+  const t = foldVn(text);
+  if (/\b(khong|chua|ko|k)\s+dong y\b/.test(t)) return false;
+  return isAffirmative(text) || /\bdong y\b/.test(t);
 }
 
 function mergeGuideFields(session: Session, raw: GuideLlmResult["fields"], userText: string): void {
   if (!raw && !userText) return;
   const f = session.fields;
-  if (raw?.consent === true || /dong y/.test(foldVn(userText))) {
+  if (!f.consent && userConsents(userText)) {
     f.consent = true;
     f.consentAt = f.consentAt ?? new Date().toISOString();
   }
@@ -132,6 +141,10 @@ export async function applyGuideTurn(
 ): Promise<TurnResult> {
   const session = structuredClone(inputSession);
 
+  if (session.step === "end") return viewGuide(session, [END_MSG]);
+  // Post-result states reuse the flow machine (share/replay/learn/retry).
+  if (POST_STEPS.includes(session.step)) return applyTurn(session, input, deps);
+
   if (session.step === "processing") {
     return viewGuide(session, ["Video đang xử lý. Ba mẹ chờ mình một chút nhé!"]);
   }
@@ -167,9 +180,8 @@ export async function applyGuideTurn(
 
   if (looksLikeExit(userText)) {
     session.step = "end";
-    const msg = "Cảm ơn ba mẹ đã ghé. Khi nào muốn tạo video cho bé, nhắn mình lại nhé.";
-    pushHistory(session, "assistant", msg);
-    return viewGuide(session, [msg]);
+    pushHistory(session, "assistant", END_MSG);
+    return viewGuide(session, [END_MSG]);
   }
 
   if (session.step === "confirm" && session.fields.photoOk && isAffirmative(userText)) {
@@ -185,11 +197,9 @@ export async function applyGuideTurn(
     return viewGuide(session, [msg]);
   }
 
-  if (parsed.exit || looksLikeExit(parsed.reply ?? "")) {
+  if (parsed.exit === true) {
     session.step = "end";
-    const msg =
-      sanitizeReply(parsed.reply) ??
-      "Cảm ơn ba mẹ đã ghé. Khi nào muốn tạo video cho bé, nhắn mình lại nhé.";
+    const msg = sanitizeReply(parsed.reply) ?? END_MSG;
     pushHistory(session, "assistant", msg);
     return viewGuide(session, [msg]);
   }

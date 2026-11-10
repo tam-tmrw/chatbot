@@ -29,7 +29,8 @@ export async function POST(req: Request) {
   if (!current) return Response.json({ error: "Not found" }, { status: 404 });
 
   let qc: QcOutcome | undefined;
-  if (body.type === "image") {
+  // Image QC (AWS) only at the photo step: no third-party calls before consent/text.
+  if (body.type === "image" && current.step === "photo") {
     const mime = body.mime ?? "";
     if (mime !== "image/jpeg" && mime !== "image/png") {
       qc = { ok: false, reason: "bad_type" };
