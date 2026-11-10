@@ -198,7 +198,7 @@ function applyExtracted(session: Session, extracted: Extracted): boolean {
   return applied;
 }
 
-function confirmJob(session: Session, deps: MachineDeps): TurnResult {
+export function startVideoJob(session: Session, deps: MachineDeps): TurnResult {
   const missing = nextIncomplete(session);
   if (missing !== "confirm") {
     session.step = missing;
@@ -221,6 +221,10 @@ function confirmJob(session: Session, deps: MachineDeps): TurnResult {
   session.step = "processing";
   session.editMenu = false;
   return view(session);
+}
+
+function confirmJob(session: Session, deps: MachineDeps): TurnResult {
+  return startVideoJob(session, deps);
 }
 
 function failPhoto(session: Session, reason: QcReason): TurnResult {
