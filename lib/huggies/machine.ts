@@ -37,13 +37,28 @@ export type MachineDeps = {
   now: () => number;
   delayMs: number;
   newJobId: () => string;
+  /** Fallback pool (unspecified gender, or when boy/girl pools empty). */
   videoUrls: string[];
+  videoUrlsBoy?: string[];
+  videoUrlsGirl?: string[];
   pickVideo: (urls: string[]) => string;
   previewUrl: string | null;
   learnMoreUrl: string;
   termsUrl: string;
   extract?: (step: StepId, text: string, session: Session) => Promise<Extracted>;
 };
+
+/** Pick the demo video pool from gender; fall back to shared list. */
+export function videoPoolForGender(
+  gender: Session["fields"]["gender"],
+  deps: Pick<MachineDeps, "videoUrls" | "videoUrlsBoy" | "videoUrlsGirl">,
+): string[] {
+  if (gender === "boy" && (deps.videoUrlsBoy?.length ?? 0) > 0) return deps.videoUrlsBoy!;
+  if (gender === "girl" && (deps.videoUrlsGirl?.length ?? 0) > 0) return deps.videoUrlsGirl!;
+  if (deps.videoUrls.length > 0) return deps.videoUrls;
+  // ponytail: unspecified + no shared list → merge both gender pools
+  return [...(deps.videoUrlsBoy ?? []), ...(deps.videoUrlsGirl ?? [])];
+}
 
 const COLLECT: StepId[] = [
   "baby_name",
@@ -578,14 +593,15 @@ export function settle(inputSession: Session, deps: MachineDeps): TurnResult {
     session.step = "error";
     return view(session);
   }
-  if (deps.videoUrls.length === 0) {
+  const pool = videoPoolForGender(session.fields.gender, deps);
+  if (pool.length === 0) {
     session.job.status = "error";
     session.job.errorCode = "config";
     session.job.videoUrl = null;
     session.step = "error";
     return view(session);
   }
-  session.job.videoUrl = deps.pickVideo(deps.videoUrls);
+  session.job.videoUrl = deps.pickVideo(pool);
   session.job.previewUrl = deps.previewUrl;
   session.job.status = "done";
   session.job.errorCode = null;
