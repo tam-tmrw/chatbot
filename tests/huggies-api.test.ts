@@ -99,7 +99,7 @@ describe("huggies API", () => {
     const created = await createSession(
       authed("http://localhost/api/huggies/session", { mode: "flow" }),
     );
-    let sessionId = ((await created.json()) as { sessionId: string }).sessionId;
+    const sessionId = ((await created.json()) as { sessionId: string }).sessionId;
     for (const text of ["1", "1", "Bin", "Bin", "1", "2", "1"]) {
       const res = await postMessage(
         authed("http://localhost/api/huggies/message", { sessionId, type: "text", text }),
@@ -139,7 +139,7 @@ describe("huggies API", () => {
       authed("http://localhost/api/huggies/session", { mode: "flow" }),
     );
     const start = await created.json();
-    let sessionId = start.sessionId as string;
+    const sessionId = start.sessionId as string;
     for (const text of ["1", "1", "Bin", "Bin", "1", "2", "1"]) {
       const res = await postMessage(
         authed("http://localhost/api/huggies/message", {

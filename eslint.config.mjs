@@ -18,6 +18,14 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "coverage/**",
+      // Stray git worktree with its own node_modules. Never the source of truth;
+      // linting it used to add ~232 errors nobody could act on.
+      ".worktrees/**",
+      // Agent tooling artifacts, not application code.
+      "graphify-out/**",
+      ".superpowers/**",
+      ".cursor/**",
     ],
   },
 ];

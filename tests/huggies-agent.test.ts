@@ -133,7 +133,7 @@ describe("applyGuideTurn", () => {
   });
 
   it("after photo uses full confirm summary", async () => {
-    let s = freshSession({ id: "g-sum", mode: "guide", termsVersion: "t" });
+    const s = freshSession({ id: "g-sum", mode: "guide", termsVersion: "t" });
     s.fields = {
       consent: true,
       consentAt: "t",
@@ -160,7 +160,7 @@ describe("applyGuideTurn", () => {
   });
 
   it("starts job on confirm after photoOk", async () => {
-    let s = freshSession({ id: "g5", mode: "guide", termsVersion: "t" });
+    const s = freshSession({ id: "g5", mode: "guide", termsVersion: "t" });
     s.fields = {
       consent: true,
       consentAt: "t",
