@@ -95,7 +95,7 @@ const HINTS: Record<Exclude<TextFieldKey, "consent" | "hobby">, string> = {
   babyName: "👶 Ba mẹ cho Huggies hỏi bé nhà mình tên gì ạ? Ví dụ: Bin, Minh Anh.",
   displayName:
     "🏷️ Tên hiện trên video tối đa 12 ký tự và viết liền (không dấu cách). Ba mẹ muốn giữ tên bé, hay đặt biệt danh ngắn hơn? Ví dụ: Bin, MinhAnh — hoặc nói “giữ tên này”.",
-  gender: "🚻 Bé nhà mình là bé trai, bé gái, hay ba mẹ muốn không nêu ạ?",
+  gender: "🚻 Bé nhà mình là bé trai hay bé gái ạ?",
   ageRange:
     "📅 Bé đang ở độ tuổi nào ạ? Ba mẹ chọn giúp mình: dưới 1 / 1–2 / 2–3 / trên 3 tuổi (hoặc gõ 1.5, tuổi rưỡi…).",
 };

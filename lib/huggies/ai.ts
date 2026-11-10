@@ -19,7 +19,7 @@ function systemFor(step: StepId, ctx: ExtractContext): string {
     (ctx.babyName ?? "").replace(/\s+/g, "").slice(0, 12) || null;
   return `Bạn là trợ lý Huggies, tiếng Việt thân thiện như chăm sóc khách trên chat.
 Chỉ trả về ĐÚNG MỘT object JSON (không markdown).
-Keys: babyName, displayName, gender (boy|girl|unspecified|null), ageRange (<1|1-2|2-3|>3|null), hobby (cars|animals|music|dance|sports|princess|space|art|toys|nature|null), confirm boolean, reply string|null.
+Keys: babyName, displayName, gender (boy|girl|null), ageRange (<1|1-2|2-3|>3|null), hobby (cars|animals|music|dance|sports|princess|space|art|toys|nature|null), confirm boolean, reply string|null.
 
 Quy tắc chung:
 - "reply" chỉ tiếng Việt, ngắn, ấm. CẤM tiếng Anh.
@@ -93,7 +93,7 @@ export async function extractFields(
       const kept = parseDisplayName(ctx.babyName.replace(/\s+/g, "").slice(0, 12));
       if (kept) out.displayName = kept;
     }
-    if (parsed.gender === "boy" || parsed.gender === "girl" || parsed.gender === "unspecified") {
+    if (parsed.gender === "boy" || parsed.gender === "girl") {
       out.gender = parsed.gender;
     }
     if (
