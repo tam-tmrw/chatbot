@@ -258,25 +258,41 @@ describe("applyGuideTurn", () => {
     expect(out.session.step).not.toBe("end");
   });
 
-  it("appends terms URL to an LLM reply with '?' but no URL while !consent", async () => {
+  it("while !consent, any non-agree message shows terms without LLM", async () => {
     const s = freshSession({ id: "g10", mode: "guide", termsVersion: "t" });
-    const out = await applyGuideTurn(
-      s,
-      { type: "text", text: "hello" },
-      baseDeps({ guideChat: vi.fn(async () => JSON.stringify({ reply: "Ba mẹ đồng ý điều khoản nhé?" })) }),
-    );
+    const guideChat = vi.fn(async () => JSON.stringify({ reply: "Ba mẹ đồng ý điều khoản nhé?" }));
+    const out = await applyGuideTurn(s, { type: "text", text: "hello" }, baseDeps({ guideChat }));
+    expect(guideChat).not.toHaveBeenCalled();
+    expect(out.session.fields.consent).toBe(false);
+    expect(out.session.step).toBe("consent");
     expect(out.messages.join("\n")).toContain("https://terms.example");
   });
 
-  it("bare 'ok' on welcome does not consent; shows terms first, then 'ok' consents", async () => {
+  it("bare 'ok' on welcome shows terms; second 'ok' consents without LLM", async () => {
     const s = freshSession({ id: "g11", mode: "guide", termsVersion: "t" });
     const guideChat = vi.fn(async () => JSON.stringify({ reply: "Dạ vâng ạ." }));
     const out = await applyGuideTurn(s, { type: "text", text: "ok" }, baseDeps({ guideChat }));
+    expect(guideChat).not.toHaveBeenCalled();
     expect(out.session.fields.consent).toBe(false);
     expect(out.messages.join("\n")).toContain("https://terms.example");
     expect(out.session.step).toBe("consent");
-    const out2 = await applyGuideTurn(out.session, { type: "text", text: "ok" }, baseDeps({ guideChat }));
+    const out2 = await applyGuideTurn(out.session, { type: "text", text: "ok đi nào" }, baseDeps({ guideChat }));
+    expect(guideChat).not.toHaveBeenCalled();
     expect(out2.session.fields.consent).toBe(true);
+    expect(out2.session.step).toBe("baby_name");
+    expect(out2.messages.join("\n")).toMatch(/tên/i);
+  });
+
+  it("đồng ý consents even if LLM would fail", async () => {
+    const s = freshSession({ id: "g-dongy", mode: "guide", termsVersion: "t" });
+    s.step = "consent";
+    const guideChat = vi.fn(async () => {
+      throw new Error("timeout");
+    });
+    const out = await applyGuideTurn(s, { type: "text", text: "đồng ý" }, baseDeps({ guideChat }));
+    expect(guideChat).not.toHaveBeenCalled();
+    expect(out.session.fields.consent).toBe(true);
+    expect(out.session.step).toBe("baby_name");
   });
 
   it("negating consent ends deterministically without LLM", async () => {

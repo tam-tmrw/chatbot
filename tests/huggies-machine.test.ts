@@ -261,7 +261,8 @@ describe("huggies machine", () => {
     const s = freshSession({ id: "gw", mode: "guide", termsVersion: "t" });
     const p = promptFor(s);
     expect(p.text).not.toMatch(/gõ số|1\.\s/);
-    expect(p.text).toMatch(/Huggies|ba mẹ/i);
+    expect(p.text).toMatch(/Huggies|chiến dịch|ba mẹ/i);
+    expect(p.text).toMatch(/bắt đầu|điều khoản|ảnh/i);
     expect(p.buttons).toEqual([]);
   });
 

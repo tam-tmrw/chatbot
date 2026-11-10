@@ -204,23 +204,43 @@ export async function applyGuideTurn(
     return startVideoJob(session, deps);
   }
 
-  if (!session.fields.consent && NEGATES_CONSENT.test(foldVn(userText))) {
-    session.step = "end";
-    pushHistory(session, "assistant", END_MSG);
-    return viewGuide(session, [END_MSG]);
-  }
-
   const stepBefore = session.step;
-  if (!session.fields.consent && looksLikeTermsAsk(userText) && !userConsents(userText, stepBefore)) {
-    const msg = consentPrompt(deps.termsUrl);
-    session.step = "consent";
-    pushHistory(session, "assistant", msg);
-    return viewGuide(session, [msg]);
+
+  // Consent is a hard gate — never depend on the LLM (timeout was blocking "đồng ý"/"ok").
+  if (!session.fields.consent) {
+    if (NEGATES_CONSENT.test(foldVn(userText))) {
+      session.step = "end";
+      pushHistory(session, "assistant", END_MSG);
+      return viewGuide(session, [END_MSG]);
+    }
+    if (userConsents(userText, stepBefore)) {
+      session.fields.consent = true;
+      session.fields.consentAt = session.fields.consentAt ?? new Date(deps.now()).toISOString();
+      session.step = "baby_name";
+      // Pure "ok"/"đồng ý" → ask next field. Richer first message still goes to LLM below.
+      const remainder = foldVn(userText)
+        .replace(/\bdong y\b/g, " ")
+        .replace(/\b(ok|oke|okay|vang|duoc)\b/g, " ")
+        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .trim();
+      if (isAffirmative(userText) || remainder.length < 3) {
+        const msg = firstMissingHint(session.fields, { termsUrl: deps.termsUrl });
+        pushHistory(session, "assistant", msg);
+        return viewGuide(session, [msg]);
+      }
+    } else {
+      session.step = "consent";
+      const msg =
+        looksLikeConfused(userText) || looksLikeTermsAsk(userText)
+          ? guideReprompt(session.fields, deps.termsUrl)
+          : consentPrompt(deps.termsUrl);
+      pushHistory(session, "assistant", msg);
+      return viewGuide(session, [msg]);
+    }
   }
 
-  // Clarification / off-script questions → re-explain current need (no LLM, no "chưa nghe rõ").
+  // Clarification / off-script → re-explain current need (no LLM).
   if (looksLikeConfused(userText)) {
-    if (!session.fields.consent) session.step = "consent";
     const msg = guideReprompt(session.fields, deps.termsUrl);
     pushHistory(session, "assistant", msg);
     return viewGuide(session, [msg]);
@@ -230,7 +250,6 @@ export async function applyGuideTurn(
   try {
     parsed = await callGuideLlm(session, userText, deps);
   } catch {
-    if (!session.fields.consent) session.step = "consent";
     const msg = guideReprompt(session.fields, deps.termsUrl);
     pushHistory(session, "assistant", msg);
     return viewGuide(session, [msg]);

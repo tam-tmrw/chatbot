@@ -125,8 +125,11 @@ export function promptFor(session: Session): { text: string; buttons: Button[] }
     case "welcome":
       if (session.mode === "guide") {
         return {
-          text:
-            "Xin chào ba mẹ! Mình là trợ lý Huggies — mình sẽ hỏi vài thông tin ngắn (trả lời tự nhiên giúp mình), rồi cùng tạo video nhảy đáng yêu cho bé nhé.\nBa mẹ nhắn “bắt đầu” hoặc cứ hỏi/trả lời để mình hỗ trợ ạ.",
+          text: [
+            "Xin chào ba mẹ! Mình là trợ lý Huggies cho chiến dịch tạo video nhảy đáng yêu cho bé.",
+            "Ba mẹ chỉ cần trả lời tự nhiên vài câu (tên bé, giới tính, độ tuổi, sở thích), đồng ý điều khoản dùng ảnh, rồi gửi 1 ảnh mặt bé rõ — mình sẽ ghép thành video ngắn.",
+            "Nhắn “bắt đầu” (hoặc “ok”) để xem điều khoản và bắt đầu nhé.",
+          ].join("\n"),
           buttons: [],
         };
       }
