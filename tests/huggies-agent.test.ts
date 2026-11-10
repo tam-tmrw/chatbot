@@ -76,7 +76,7 @@ describe("applyGuideTurn", () => {
     expect(out.messages.join(" ")).toMatch(/thông tin|trước|ảnh/i);
   });
 
-  it("falls back in VN when LLM times out", async () => {
+  it("falls back by re-explaining current step when LLM times out", async () => {
     const s = freshSession({ id: "g4", mode: "guide", termsVersion: "t" });
     const out = await applyGuideTurn(
       s,
@@ -86,9 +86,35 @@ describe("applyGuideTurn", () => {
         guideChat: () => new Promise((r) => setTimeout(() => r("{}"), 50)),
       }),
     );
-    expect(out.messages.join(" ")).not.toMatch(/please|provide/i);
-    expect(out.messages.join(" ")).toMatch(/điều khoản|đồng ý|Ba mẹ/i);
+    expect(out.messages.join(" ")).not.toMatch(/please|provide|chưa nghe rõ/i);
+    expect(out.messages.join(" ")).toMatch(/giải thích lại|điều khoản|đồng ý/i);
     expect(out.messages.join("\n")).toContain("https://terms.example");
+  });
+
+  it("re-explains current step on confused questions without LLM", async () => {
+    const s = freshSession({ id: "g-confused", mode: "guide", termsVersion: "t" });
+    const chat = vi.fn(async () => "{}");
+    const out = await applyGuideTurn(
+      s,
+      { type: "text", text: "cái này là gì vậy" },
+      baseDeps({ guideChat: chat, termsUrl: "https://terms.example/tc" }),
+    );
+    expect(chat).not.toHaveBeenCalled();
+    expect(out.session.fields.consent).toBe(false);
+    expect(out.session.step).toBe("consent");
+    const msg = out.messages.join("\n");
+    expect(msg).not.toMatch(/chưa nghe rõ/i);
+    expect(msg).toMatch(/giải thích lại/i);
+    expect(msg).toContain("https://terms.example/tc");
+
+    const out2 = await applyGuideTurn(
+      out.session,
+      { type: "text", text: "chưa hiểu" },
+      baseDeps({ guideChat: chat, termsUrl: "https://terms.example/tc" }),
+    );
+    expect(chat).not.toHaveBeenCalled();
+    expect(out2.messages.join("\n")).not.toMatch(/chưa nghe rõ/i);
+    expect(out2.messages.join("\n")).toContain("https://terms.example/tc");
   });
 
   it("answers terms questions with URL and stays on consent", async () => {

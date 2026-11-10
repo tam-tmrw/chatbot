@@ -35,6 +35,23 @@ export function looksLikeTermsAsk(text: string): boolean {
   return /dieu khoan|link dieu khoan|xem dieu khoan|\blink\b|\burl\b|cho xem/.test(t);
 }
 
+/** Off-script clarification — re-explain current step instead of "chưa nghe rõ". */
+export function looksLikeConfused(text: string): boolean {
+  const t = foldVn(text).trim();
+  if (!t) return false;
+  if (/\b(dong y|khong dong y|bat dau|oke|ok)\b/.test(t) && t.length < 12) return false;
+  return (
+    /chua hieu|khong hieu|khong ro|la gi vay|la gi the|cai nay la gi|sao vay|the nao|giai thich|noi lai|lam sao|y gi|nghia la gi|\?\s*$/.test(
+      t,
+    ) || t === "?"
+  );
+}
+
+/** Re-state what the guide still needs — never "chưa nghe rõ". */
+export function guideReprompt(fields: Fields, termsUrl: string): string {
+  return `Mình giải thích lại bước đang cần nhé:\n${firstMissingHint(fields, { termsUrl })}`;
+}
+
 function hobbyHint(): string {
   const labels = HOBBIES.map((h) => h.label).join(", ");
   return `Bé thích gì nhất ạ? Chọn một trong: ${labels}.`;

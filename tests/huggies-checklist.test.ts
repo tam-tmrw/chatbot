@@ -3,6 +3,8 @@ import {
   confirmSummary,
   consentPrompt,
   firstMissingHint,
+  guideReprompt,
+  looksLikeConfused,
   looksLikeTermsAsk,
   missingTextKeys,
   textFieldsComplete,
@@ -54,6 +56,20 @@ describe("huggies checklist", () => {
     expect(looksLikeTermsAsk("cho xem link điều khoản")).toBe(true);
     expect(looksLikeTermsAsk("đồng ý")).toBe(false);
     expect(looksLikeTermsAsk("ok")).toBe(false);
+  });
+
+  it("detects confused / off-script clarification", () => {
+    expect(looksLikeConfused("cái này là gì vậy")).toBe(true);
+    expect(looksLikeConfused("chưa hiểu")).toBe(true);
+    expect(looksLikeConfused("đồng ý")).toBe(false);
+    expect(looksLikeConfused("ok")).toBe(false);
+  });
+
+  it("guideReprompt re-explains without chưa nghe rõ", () => {
+    const msg = guideReprompt(empty(), "https://terms.example/tc");
+    expect(msg).toMatch(/giải thích lại/i);
+    expect(msg).not.toMatch(/chưa nghe rõ/i);
+    expect(msg).toContain("https://terms.example/tc");
   });
 
   it("hobby hint lists every HOBBIES label", () => {

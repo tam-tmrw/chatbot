@@ -4,6 +4,8 @@ import {
   confirmSummary,
   consentPrompt,
   firstMissingHint,
+  guideReprompt,
+  looksLikeConfused,
   looksLikeTermsAsk,
   PHOTO_ASK,
   textFieldsComplete,
@@ -216,11 +218,20 @@ export async function applyGuideTurn(
     return viewGuide(session, [msg]);
   }
 
+  // Clarification / off-script questions → re-explain current need (no LLM, no "chưa nghe rõ").
+  if (looksLikeConfused(userText)) {
+    if (!session.fields.consent) session.step = "consent";
+    const msg = guideReprompt(session.fields, deps.termsUrl);
+    pushHistory(session, "assistant", msg);
+    return viewGuide(session, [msg]);
+  }
+
   let parsed: GuideLlmResult;
   try {
     parsed = await callGuideLlm(session, userText, deps);
   } catch {
-    const msg = `Mình chưa nghe rõ ạ.\n${firstMissingHint(session.fields, { termsUrl: deps.termsUrl })}`;
+    if (!session.fields.consent) session.step = "consent";
+    const msg = guideReprompt(session.fields, deps.termsUrl);
     pushHistory(session, "assistant", msg);
     return viewGuide(session, [msg]);
   }
