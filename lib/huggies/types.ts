@@ -81,6 +81,8 @@ export type Job = {
   retries: number;
   readyAt: number;
   announced: boolean;
+  /** Gender frozen at confirm — settle picks boy/girl pool from this. */
+  genderSnap?: Gender | null;
 };
 
 export type Session = {
