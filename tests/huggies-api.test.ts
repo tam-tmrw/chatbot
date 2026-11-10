@@ -61,6 +61,28 @@ describe("huggies API", () => {
     expect(body.step).toBe("welcome");
   });
 
+  it("routes guide mode and rejects early photo", async () => {
+    const created = await createSession(
+      authed("http://localhost/api/huggies/session", { mode: "guide", channel: "zalo" }),
+    );
+    const { sessionId } = await created.json();
+    const png = Buffer.alloc(24);
+    png.set([137, 80, 78, 71, 13, 10, 26, 10], 0);
+    png.writeUInt32BE(400, 16);
+    png.writeUInt32BE(400, 20);
+    const photo = await postMessage(
+      authed("http://localhost/api/huggies/message", {
+        sessionId,
+        type: "image",
+        mime: "image/png",
+        imageBase64: png.toString("base64"),
+      }),
+    );
+    const body = await photo.json();
+    expect(body.step).not.toBe("confirm");
+    expect(body.messages.join(" ")).toMatch(/trước|thông tin|điều khoản/i);
+  });
+
   it("soft-passes photo when Rekognition auth fails", async () => {
     const { detectFaceFacts } = await import("@/lib/huggies/rekognition");
     vi.mocked(detectFaceFacts).mockRejectedValueOnce(

@@ -1,6 +1,7 @@
 import { hasDemoCookie } from "@/lib/demo-access";
+import { applyGuideTurn } from "@/lib/huggies/agent";
 import { promptFor } from "@/lib/huggies/copy";
-import { huggiesDeps } from "@/lib/huggies/env";
+import { huggiesDeps, huggiesGuideDeps } from "@/lib/huggies/env";
 import { imageMinEdge } from "@/lib/huggies/image";
 import { applyTurn, freshSession } from "@/lib/huggies/machine";
 import { judgeFace, QC_THRESHOLDS } from "@/lib/huggies/qc";
@@ -59,11 +60,16 @@ export async function POST(req: Request) {
     }
   }
 
-  const result = await applyTurn(
-    current,
-    { type: body.type ?? "text", text: body.text, buttonId: body.buttonId, qc },
-    huggiesDeps(current.ai),
-  );
+  const turnInput = {
+    type: body.type ?? "text",
+    text: body.text,
+    buttonId: body.buttonId,
+    qc,
+  } satisfies TurnInput;
+  const result =
+    current.mode === "guide"
+      ? await applyGuideTurn(current, turnInput, huggiesGuideDeps())
+      : await applyTurn(current, turnInput, huggiesDeps(current.ai));
 
   if (result.restart) {
     const next = freshSession({
@@ -78,6 +84,7 @@ export async function POST(req: Request) {
     return Response.json({
       sessionId: next.id,
       step: next.step,
+      mode: next.mode,
       messages: [prompt.text],
       buttons: prompt.buttons,
       jobId: null,
@@ -89,6 +96,7 @@ export async function POST(req: Request) {
   return Response.json({
     sessionId: result.session.id,
     step: result.session.step,
+    mode: result.session.mode,
     messages: result.messages,
     buttons: result.buttons,
     jobId: result.jobId,
