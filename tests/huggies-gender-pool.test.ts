@@ -46,7 +46,7 @@ describe("gender video pool", () => {
       videoUrlsGirl: ["https://s3.example/girl.mp4"],
       pickVideo: (urls: string[]) => urls[0],
     };
-    let s = freshSession({ id: "g-girl", mode: "flow", termsVersion: "t" });
+    const s = freshSession({ id: "g-girl", mode: "flow", termsVersion: "t" });
     s.fields = {
       ...s.fields,
       consent: true,
