@@ -187,6 +187,35 @@ describe("huggies machine", () => {
     expect(pickVideo).toHaveBeenCalledTimes(1);
   });
 
+  it("picks result video from gender pool", async () => {
+    const pickVideo = vi.fn((urls: string[]) => urls[0]);
+    const d = deps({
+      pickVideo,
+      videoUrls: ["https://s3.example/fallback.mp4"],
+      videoUrlsBoy: ["https://s3.example/boy.mp4"],
+      videoUrlsGirl: ["https://s3.example/girl.mp4"],
+    });
+    const ready = await toConfirm(); // gender path uses "1" → boy
+    expect(ready.fields.gender).toBe("boy");
+    const started = await applyTurn(ready, { type: "text", text: "1" }, d);
+    const done = settle(
+      started.session,
+      deps({ ...d, now: () => 1_700_000_000_000 + 3000 }),
+    );
+    expect(done.session.job?.videoUrl).toBe("https://s3.example/boy.mp4");
+    expect(pickVideo).toHaveBeenCalledWith(["https://s3.example/boy.mp4"]);
+
+    const girlReady = structuredClone(ready);
+    girlReady.fields.gender = "girl";
+    girlReady.job = null;
+    const girlStarted = await applyTurn(girlReady, { type: "text", text: "1" }, d);
+    const girlDone = settle(
+      girlStarted.session,
+      deps({ ...d, now: () => 1_700_000_000_000 + 3000 }),
+    );
+    expect(girlDone.session.job?.videoUrl).toBe("https://s3.example/girl.mp4");
+  });
+
   it("force-fails a passing photo three times then hands off without a job", async () => {
     let s = freshSession({
       id: "s1",
