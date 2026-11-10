@@ -26,9 +26,9 @@ import {
   parseAgeToken,
   parseBabyName,
   parseDisplayName,
-  parseGenderToken,
   parseHobbyToken,
 } from "@/lib/huggies/validate";
+import { parseGenderInput } from "@/lib/huggies/gender";
 
 export type GuideLlmResult = {
   reply?: string | null;
@@ -164,18 +164,9 @@ function applyGuideHeuristics(session: Session, userText: string): boolean {
       }
     }
   } else if (!f.gender) {
-    const fromToken = parseGenderToken(userText);
-    if (fromToken) {
-      f.gender = fromToken;
-      changed = true;
-    } else if (/\b(be\s+trai|trai|boy|nam)\b/.test(t)) {
-      f.gender = "boy";
-      changed = true;
-    } else if (/\b(be\s+gai|gai|girl|nu)\b/.test(t)) {
-      f.gender = "girl";
-      changed = true;
-    } else if (/\b(khong neu|khong noi|khong noi gi|unspecified)\b/.test(t)) {
-      f.gender = "unspecified";
+    const gender = parseGenderInput(userText);
+    if (gender) {
+      f.gender = gender;
       changed = true;
     }
   } else if (!f.ageRange) {

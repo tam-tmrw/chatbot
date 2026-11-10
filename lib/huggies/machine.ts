@@ -1,5 +1,6 @@
 import { foldVn } from "@/lib/conversation/flow";
 import { ackFor, gentleHint, promptFor, qcUserCopy } from "@/lib/huggies/copy";
+import { parseGenderInput } from "@/lib/huggies/gender";
 import type {
   AgeRange,
   DemoChannel,
@@ -20,7 +21,6 @@ import {
   parseAgeToken,
   parseBabyName,
   parseDisplayName,
-  parseGenderToken,
   parseHobbyToken,
 } from "@/lib/huggies/validate";
 
@@ -48,15 +48,21 @@ export type MachineDeps = {
   extract?: (step: StepId, text: string, session: Session) => Promise<Extracted>;
 };
 
-/** Pick the demo video pool from gender; fall back to shared list. */
+/** Pick the demo video pool from gender; never cross into the other gender's list. */
 export function videoPoolForGender(
   gender: Session["fields"]["gender"],
   deps: Pick<MachineDeps, "videoUrls" | "videoUrlsBoy" | "videoUrlsGirl">,
 ): string[] {
-  if (gender === "boy" && (deps.videoUrlsBoy?.length ?? 0) > 0) return deps.videoUrlsBoy!;
-  if (gender === "girl" && (deps.videoUrlsGirl?.length ?? 0) > 0) return deps.videoUrlsGirl!;
+  if (gender === "boy") {
+    if ((deps.videoUrlsBoy?.length ?? 0) > 0) return deps.videoUrlsBoy!;
+    return deps.videoUrls;
+  }
+  if (gender === "girl") {
+    if ((deps.videoUrlsGirl?.length ?? 0) > 0) return deps.videoUrlsGirl!;
+    return deps.videoUrls;
+  }
+  // unspecified / null — shared fallback, else merge both
   if (deps.videoUrls.length > 0) return deps.videoUrls;
-  // ponytail: unspecified + no shared list → merge both gender pools
   return [...(deps.videoUrlsBoy ?? []), ...(deps.videoUrlsGirl ?? [])];
 }
 
@@ -231,7 +237,10 @@ export function startVideoJob(session: Session, deps: MachineDeps): TurnResult {
       retries: 0,
       readyAt: deps.now() + deps.delayMs,
       announced: false,
+      genderSnap: session.fields.gender,
     };
+  } else {
+    session.job.genderSnap = session.fields.gender;
   }
   session.step = "processing";
   session.editMenu = false;
@@ -260,14 +269,7 @@ function failPhoto(session: Session, reason: QcReason): TurnResult {
 }
 
 function genderOf(input: TurnInput): Gender | null {
-  if (
-    input.buttonId === "boy" ||
-    input.buttonId === "girl" ||
-    input.buttonId === "unspecified"
-  ) {
-    return input.buttonId;
-  }
-  return parseGenderToken(input.text ?? "");
+  return parseGenderInput(input.buttonId) ?? parseGenderInput(input.text);
 }
 
 function ageOf(input: TurnInput): AgeRange | null {
@@ -593,7 +595,8 @@ export function settle(inputSession: Session, deps: MachineDeps): TurnResult {
     session.step = "error";
     return view(session);
   }
-  const pool = videoPoolForGender(session.fields.gender, deps);
+  const gender = session.job.genderSnap ?? session.fields.gender;
+  const pool = videoPoolForGender(gender, deps);
   if (pool.length === 0) {
     session.job.status = "error";
     session.job.errorCode = "config";

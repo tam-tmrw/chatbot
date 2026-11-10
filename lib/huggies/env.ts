@@ -11,17 +11,22 @@ function csvUrls(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
+/** Dynamic key — avoids Next.js build-time inlining of process.env.HUGGIES_*. */
+function envCsv(name: string): string[] {
+  return csvUrls(process.env[name]);
+}
+
 /** Shared / unspecified-gender fallback. */
 export function videoUrlsFromEnv(): string[] {
-  return csvUrls(process.env.HUGGIES_VIDEO_URLS);
+  return envCsv("HUGGIES_VIDEO_URLS");
 }
 
 export function videoUrlsBoyFromEnv(): string[] {
-  return csvUrls(process.env.HUGGIES_VIDEO_URLS_BOY);
+  return envCsv("HUGGIES_VIDEO_URLS_BOY");
 }
 
 export function videoUrlsGirlFromEnv(): string[] {
-  return csvUrls(process.env.HUGGIES_VIDEO_URLS_GIRL);
+  return envCsv("HUGGIES_VIDEO_URLS_GIRL");
 }
 
 export function huggiesDeps(ai: boolean): MachineDeps {
