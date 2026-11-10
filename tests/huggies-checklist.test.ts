@@ -88,4 +88,13 @@ describe("huggies checklist", () => {
     expect(s).toMatch(/Ảnh|ảnh/);
     expect(s).toMatch(/xác nhận|tạo video/i);
   });
+
+  it("firstMissingHint asks for photo (not confirm) when text done and !photoOk", () => {
+    const f = empty();
+    Object.assign(f, { consent: true, babyName: "Tủn", displayName: "Tun", gender: "boy", ageRange: "1-2", hobby: "cars" });
+    expect(firstMissingHint(f)).toMatch(/ảnh/);
+    expect(firstMissingHint(f)).not.toMatch(/xác nhận/);
+    f.photoOk = true;
+    expect(firstMissingHint(f)).toMatch(/xác nhận/);
+  });
 });

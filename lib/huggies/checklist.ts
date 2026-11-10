@@ -55,6 +55,8 @@ export function confirmSummary(fields: Fields): string {
   ].join("\n");
 }
 
+export const PHOTO_ASK = "Thông tin đủ rồi ạ. Ba mẹ gửi 1 ảnh mặt bé rõ, nhìn thẳng, đủ sáng nhé.";
+
 const HINTS: Record<Exclude<TextFieldKey, "consent" | "hobby">, string> = {
   babyName: "Bé nhà mình tên gì ạ? Ví dụ: Bin, Minh Anh.",
   displayName:
@@ -83,7 +85,7 @@ export function firstMissingHint(
   opts?: { termsUrl?: string },
 ): string {
   const key = missingTextKeys(fields)[0];
-  if (!key) return confirmSummary(fields);
+  if (!key) return fields.photoOk ? confirmSummary(fields) : PHOTO_ASK;
   if (key === "consent") return consentPrompt(opts?.termsUrl ?? "#");
   if (key === "hobby") return hobbyHint();
   return HINTS[key];

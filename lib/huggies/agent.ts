@@ -5,6 +5,7 @@ import {
   consentPrompt,
   firstMissingHint,
   looksLikeTermsAsk,
+  PHOTO_ASK,
   textFieldsComplete,
 } from "@/lib/huggies/checklist";
 import { qcUserCopy } from "@/lib/huggies/copy";
@@ -52,17 +53,27 @@ function looksLikeExit(text: string): boolean {
   return /\b(khong choi|thoi di|thoi nha|dung lai|ket thuc|stop|bye|exit)\b/.test(t);
 }
 
-/** Consent needs affirmative user text (never LLM-only); negation blocks it. */
-function userConsents(text: string): boolean {
+const NEGATES_CONSENT = /\b(khong|chua|ko|k)\s+dong y\b/;
+
+/**
+ * Consent needs user text (never LLM-only); negation blocks it. Bare "ok"/"vâng" only counts once
+ * the consent prompt was shown (step "consent"); before that, explicit "đồng ý" is required.
+ */
+function userConsents(text: string, step: Session["step"]): boolean {
   const t = foldVn(text);
-  if (/\b(khong|chua|ko|k)\s+dong y\b/.test(t)) return false;
-  return isAffirmative(text) || /\bdong y\b/.test(t);
+  if (NEGATES_CONSENT.test(t)) return false;
+  return /\bdong y\b/.test(t) || (step === "consent" && isAffirmative(text));
 }
 
-function mergeGuideFields(session: Session, raw: GuideLlmResult["fields"], userText: string): void {
+function mergeGuideFields(
+  session: Session,
+  raw: GuideLlmResult["fields"],
+  userText: string,
+  stepBefore: Session["step"],
+): void {
   if (!raw && !userText) return;
   const f = session.fields;
-  if (!f.consent && userConsents(userText)) {
+  if (!f.consent && userConsents(userText, stepBefore)) {
     f.consent = true;
     f.consentAt = f.consentAt ?? new Date().toISOString();
   }
@@ -191,7 +202,14 @@ export async function applyGuideTurn(
     return startVideoJob(session, deps);
   }
 
-  if (!session.fields.consent && looksLikeTermsAsk(userText) && !userConsents(userText)) {
+  if (!session.fields.consent && NEGATES_CONSENT.test(foldVn(userText))) {
+    session.step = "end";
+    pushHistory(session, "assistant", END_MSG);
+    return viewGuide(session, [END_MSG]);
+  }
+
+  const stepBefore = session.step;
+  if (!session.fields.consent && looksLikeTermsAsk(userText) && !userConsents(userText, stepBefore)) {
     const msg = consentPrompt(deps.termsUrl);
     session.step = "consent";
     pushHistory(session, "assistant", msg);
@@ -214,7 +232,7 @@ export async function applyGuideTurn(
     return viewGuide(session, [msg]);
   }
 
-  mergeGuideFields(session, parsed.fields, userText);
+  mergeGuideFields(session, parsed.fields, userText, stepBefore);
 
   if (parsed.confirm && session.fields.photoOk && textFieldsComplete(session.fields)) {
     return startVideoJob(session, deps);
@@ -222,22 +240,23 @@ export async function applyGuideTurn(
 
   if (textFieldsComplete(session.fields) && !session.fields.photoOk) {
     session.step = "photo";
-    const reply =
-      sanitizeReply(parsed.reply) ??
-      "Thông tin đủ rồi ạ. Ba mẹ gửi 1 ảnh mặt bé rõ, nhìn thẳng, đủ sáng nhé.";
+    const reply = sanitizeReply(parsed.reply) ?? PHOTO_ASK;
     pushHistory(session, "assistant", reply);
     return viewGuide(session, [reply]);
   }
 
-  const reply =
-    sanitizeReply(parsed.reply) ?? firstMissingHint(session.fields, { termsUrl: deps.termsUrl });
   const hint = firstMissingHint(session.fields, { termsUrl: deps.termsUrl });
-  const withHint =
-    textFieldsComplete(session.fields)
+  const reply = sanitizeReply(parsed.reply) ?? hint;
+  const termsUrl = deps.termsUrl.trim();
+  const hasTerms = reply.includes("Điều khoản:") || (termsUrl.length > 1 && reply.includes(termsUrl));
+  // Legal link must never depend on the model: while !consent, always show the terms URL.
+  const withHint = !session.fields.consent
+    ? hasTerms
       ? reply
-      : reply.includes("?")
-        ? reply
-        : `${reply}\n${hint}`;
+      : `${reply}\n${consentPrompt(deps.termsUrl)}`
+    : textFieldsComplete(session.fields) || reply.includes("?")
+      ? reply
+      : `${reply}\n${hint}`;
   if (!session.fields.consent) session.step = "consent";
   else if (!session.fields.babyName) session.step = "baby_name";
   else if (!session.fields.displayName) session.step = "display_name";

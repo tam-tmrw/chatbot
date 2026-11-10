@@ -231,4 +231,45 @@ describe("applyGuideTurn", () => {
     );
     expect(out.session.step).not.toBe("end");
   });
+
+  it("appends terms URL to an LLM reply with '?' but no URL while !consent", async () => {
+    const s = freshSession({ id: "g10", mode: "guide", termsVersion: "t" });
+    const out = await applyGuideTurn(
+      s,
+      { type: "text", text: "hello" },
+      baseDeps({ guideChat: vi.fn(async () => JSON.stringify({ reply: "Ba mẹ đồng ý điều khoản nhé?" })) }),
+    );
+    expect(out.messages.join("\n")).toContain("https://terms.example");
+  });
+
+  it("bare 'ok' on welcome does not consent; shows terms first, then 'ok' consents", async () => {
+    const s = freshSession({ id: "g11", mode: "guide", termsVersion: "t" });
+    const guideChat = vi.fn(async () => JSON.stringify({ reply: "Dạ vâng ạ." }));
+    const out = await applyGuideTurn(s, { type: "text", text: "ok" }, baseDeps({ guideChat }));
+    expect(out.session.fields.consent).toBe(false);
+    expect(out.messages.join("\n")).toContain("https://terms.example");
+    expect(out.session.step).toBe("consent");
+    const out2 = await applyGuideTurn(out.session, { type: "text", text: "ok" }, baseDeps({ guideChat }));
+    expect(out2.session.fields.consent).toBe(true);
+  });
+
+  it("negating consent ends deterministically without LLM", async () => {
+    const s = freshSession({ id: "g12", mode: "guide", termsVersion: "t" });
+    const guideChat = vi.fn(async () => "{}");
+    const out = await applyGuideTurn(s, { type: "text", text: "không đồng ý" }, baseDeps({ guideChat }));
+    expect(guideChat).not.toHaveBeenCalled();
+    expect(out.session.step).toBe("end");
+    expect(out.session.fields.consent).toBe(false);
+    expect(out.messages.join(" ")).toMatch(/Cảm ơn/);
+  });
+
+  it("LLM timeout at photo step asks for photo, not confirm", async () => {
+    const s = freshSession({ id: "g13", mode: "guide", termsVersion: "t" });
+    s.fields = { ...s.fields, consent: true, consentAt: "t", babyName: "Tủn", displayName: "Tun", gender: "boy", ageRange: "1-2", hobby: "cars", photoOk: false };
+    s.step = "photo";
+    const out = await applyGuideTurn(s, { type: "text", text: "alo" }, baseDeps({ guideChat: async () => { throw new Error("x"); } }));
+    const msg = out.messages.join("\n");
+    expect(msg).toMatch(/ảnh/);
+    expect(msg).not.toMatch(/xác nhận/);
+  });
 });
