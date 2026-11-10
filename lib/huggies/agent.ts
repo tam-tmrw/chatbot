@@ -20,7 +20,15 @@ import type {
   TurnInput,
   TurnResult,
 } from "@/lib/huggies/types";
-import { HOBBIES, isAffirmative, parseBabyName, parseDisplayName } from "@/lib/huggies/validate";
+import {
+  HOBBIES,
+  isAffirmative,
+  parseAgeToken,
+  parseBabyName,
+  parseDisplayName,
+  parseGenderToken,
+  parseHobbyToken,
+} from "@/lib/huggies/validate";
 
 export type GuideLlmResult = {
   reply?: string | null;
@@ -67,6 +75,109 @@ function userConsents(text: string, step: Session["step"]): boolean {
   return /\bdong y\b/.test(t) || (step === "consent" && isAffirmative(text));
 }
 
+function syncGuideStep(session: Session): void {
+  const f = session.fields;
+  if (!f.consent) session.step = "consent";
+  else if (!f.babyName) session.step = "baby_name";
+  else if (!f.displayName) session.step = "display_name";
+  else if (!f.gender) session.step = "gender";
+  else if (!f.ageRange) session.step = "age_range";
+  else if (!f.hobby) session.step = "hobby";
+  else if (!f.photoOk) session.step = "photo";
+  else session.step = "confirm";
+}
+
+/** Deterministic field fill from user text — Guide must work when LLM times out. */
+function applyGuideHeuristics(session: Session, userText: string): boolean {
+  const f = session.fields;
+  const t = foldVn(userText);
+  let changed = false;
+
+  if (!f.babyName) {
+    // Leave multi-field / option tokens for the LLM; only accept clear name answers.
+    if (
+      userText.includes(",") ||
+      userText.length > 24 ||
+      /^(trai|gai|boy|girl|nam|nu|[1-4])$/i.test(userText.trim()) ||
+      /\b(dong y|thich|tuoi|xe hoi|am nhac)\b/.test(t)
+    ) {
+      /* skip */
+    } else {
+      const stripped = userText
+        .replace(/^\s*(bé\s+tên|be\s+ten|tên\s+bé|ten\s+be|tên\s+là|ten\s+la|tên|ten)\s*[:\-]?\s*/i, "")
+        .trim();
+      const n = parseBabyName(stripped) ?? parseBabyName(userText);
+      if (n) {
+        f.babyName = n;
+        changed = true;
+      }
+    }
+  } else if (!f.displayName) {
+    if (isAffirmative(userText)) {
+      const n = parseDisplayName(f.babyName.replace(/\s+/g, "").slice(0, 12));
+      if (n) {
+        f.displayName = n;
+        changed = true;
+      }
+    } else {
+      const squeezed = userText.replace(/\s+/g, "").slice(0, 12);
+      const n = parseDisplayName(squeezed) ?? parseDisplayName(userText.trim());
+      if (n) {
+        f.displayName = n;
+        changed = true;
+      }
+    }
+  } else if (!f.gender) {
+    const fromToken = parseGenderToken(userText);
+    if (fromToken) {
+      f.gender = fromToken;
+      changed = true;
+    } else if (/\b(be\s+trai|trai|boy|nam)\b/.test(t)) {
+      f.gender = "boy";
+      changed = true;
+    } else if (/\b(be\s+gai|gai|girl|nu)\b/.test(t)) {
+      f.gender = "girl";
+      changed = true;
+    } else if (/\b(khong neu|khong noi|khong noi gi|unspecified)\b/.test(t)) {
+      f.gender = "unspecified";
+      changed = true;
+    }
+  } else if (!f.ageRange) {
+    const fromToken = parseAgeToken(userText);
+    if (fromToken) {
+      f.ageRange = fromToken;
+      changed = true;
+    } else if (/\b(duoi\s*1|so sinh|newborn)\b/.test(t) || t.includes("<1")) {
+      f.ageRange = "<1";
+      changed = true;
+    } else if (/\b(1\s*[-~]\s*2|1\s*den\s*2|1\s*toi\s*2)\b/.test(t)) {
+      f.ageRange = "1-2";
+      changed = true;
+    } else if (/\b(2\s*[-~]\s*3|2\s*den\s*3|2\s*toi\s*3)\b/.test(t)) {
+      f.ageRange = "2-3";
+      changed = true;
+    } else if (/\b(tren\s*3|hon\s*3)\b/.test(t) || t.includes(">3")) {
+      f.ageRange = ">3";
+      changed = true;
+    }
+  } else if (!f.hobby) {
+    const fromToken = parseHobbyToken(userText);
+    if (fromToken) {
+      f.hobby = fromToken;
+      changed = true;
+    } else {
+      const hit = HOBBIES.find((h) => t.includes(foldVn(h.label)) || t.includes(h.id));
+      if (hit) {
+        f.hobby = hit.id;
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) syncGuideStep(session);
+  return changed;
+}
+
 function mergeGuideFields(
   session: Session,
   raw: GuideLlmResult["fields"],
@@ -104,6 +215,22 @@ function mergeGuideFields(
   if (typeof raw?.hobby === "string" && HOBBIES.some((h) => h.id === raw.hobby)) {
     f.hobby = raw.hobby as HobbyId;
   }
+  // Always try user text too — LLM may return empty fields.
+  applyGuideHeuristics(session, userText);
+  syncGuideStep(session);
+}
+
+function advanceAfterHeuristics(session: Session, deps: GuideDeps): TurnResult {
+  syncGuideStep(session);
+  if (textFieldsComplete(session.fields) && !session.fields.photoOk) {
+    session.step = "photo";
+    const msg = PHOTO_ASK;
+    pushHistory(session, "assistant", msg);
+    return viewGuide(session, [msg]);
+  }
+  const msg = firstMissingHint(session.fields, { termsUrl: deps.termsUrl });
+  pushHistory(session, "assistant", msg);
+  return viewGuide(session, [msg]);
 }
 
 function systemPrompt(session: Session, termsUrl: string): string {
@@ -246,10 +373,18 @@ export async function applyGuideTurn(
     return viewGuide(session, [msg]);
   }
 
+  // Prefer parsers over LLM for simple one-field answers (LLM timeout was stranding baby_name+).
+  if (applyGuideHeuristics(session, userText)) {
+    return advanceAfterHeuristics(session, deps);
+  }
+
   let parsed: GuideLlmResult;
   try {
     parsed = await callGuideLlm(session, userText, deps);
   } catch {
+    if (applyGuideHeuristics(session, userText)) {
+      return advanceAfterHeuristics(session, deps);
+    }
     const msg = guideReprompt(session.fields, deps.termsUrl);
     pushHistory(session, "assistant", msg);
     return viewGuide(session, [msg]);
@@ -277,22 +412,11 @@ export async function applyGuideTurn(
 
   const hint = firstMissingHint(session.fields, { termsUrl: deps.termsUrl });
   const reply = sanitizeReply(parsed.reply) ?? hint;
-  const termsUrl = deps.termsUrl.trim();
-  const hasTerms = reply.includes("Điều khoản:") || (termsUrl.length > 1 && reply.includes(termsUrl));
-  // Legal link must never depend on the model: while !consent, always show the terms URL.
-  const withHint = !session.fields.consent
-    ? hasTerms
-      ? reply
-      : `${reply}\n${consentPrompt(deps.termsUrl)}`
-    : textFieldsComplete(session.fields) || reply.includes("?")
+  const withHint =
+    textFieldsComplete(session.fields) || reply.includes("?")
       ? reply
       : `${reply}\n${hint}`;
-  if (!session.fields.consent) session.step = "consent";
-  else if (!session.fields.babyName) session.step = "baby_name";
-  else if (!session.fields.displayName) session.step = "display_name";
-  else if (!session.fields.gender) session.step = "gender";
-  else if (!session.fields.ageRange) session.step = "age_range";
-  else if (!session.fields.hobby) session.step = "hobby";
+  syncGuideStep(session);
   pushHistory(session, "assistant", withHint);
   return viewGuide(session, [withHint]);
 }

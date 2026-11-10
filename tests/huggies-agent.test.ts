@@ -314,4 +314,61 @@ describe("applyGuideTurn", () => {
     expect(msg).toMatch(/ảnh/);
     expect(msg).not.toMatch(/xác nhận/);
   });
+
+  it("walks text steps with heuristics when LLM always fails", async () => {
+    const fail = vi.fn(async () => {
+      throw new Error("timeout");
+    });
+    const deps = baseDeps({ guideChat: fail });
+    let s = freshSession({ id: "g-walk", mode: "guide", termsVersion: "t" });
+
+    // welcome → consent prompt
+    let out = await applyGuideTurn(s, { type: "text", text: "ok" }, deps);
+    expect(out.session.fields.consent).toBe(false);
+    expect(out.session.step).toBe("consent");
+    expect(out.messages.join("\n")).toContain("https://terms.example");
+
+    // consent
+    out = await applyGuideTurn(out.session, { type: "text", text: "đồng ý" }, deps);
+    expect(out.session.fields.consent).toBe(true);
+    expect(out.session.step).toBe("baby_name");
+
+    // babyName — previously stuck here on LLM fail
+    out = await applyGuideTurn(out.session, { type: "text", text: "Bin" }, deps);
+    expect(fail).not.toHaveBeenCalled();
+    expect(out.session.fields.babyName).toBe("Bin");
+    expect(out.session.step).toBe("display_name");
+    expect(out.messages.join("\n")).not.toMatch(/chưa nghe rõ|giải thích lại/i);
+
+    out = await applyGuideTurn(out.session, { type: "text", text: "bé tên Banh Tẹc" }, baseDeps({ guideChat: fail }));
+    // already has babyName from Bin walk — start fresh name path:
+    s = freshSession({ id: "g-walk2", mode: "guide", termsVersion: "t" });
+    s.fields.consent = true;
+    s.fields.consentAt = "t";
+    s.step = "baby_name";
+    out = await applyGuideTurn(s, { type: "text", text: "bé tên Banh Tẹc" }, baseDeps({ guideChat: fail }));
+    expect(out.session.fields.babyName).toBe("Banh Tẹc");
+    expect(out.session.step).toBe("display_name");
+
+    // displayName keep
+    out = await applyGuideTurn(out.session, { type: "text", text: "giữ tên này" }, baseDeps({ guideChat: fail }));
+    expect(out.session.fields.displayName).toBe("BanhTẹc");
+    expect(out.session.step).toBe("gender");
+
+    // gender
+    out = await applyGuideTurn(out.session, { type: "text", text: "bé trai" }, baseDeps({ guideChat: fail }));
+    expect(out.session.fields.gender).toBe("boy");
+    expect(out.session.step).toBe("age_range");
+
+    // age
+    out = await applyGuideTurn(out.session, { type: "text", text: "1-2 tuổi" }, baseDeps({ guideChat: fail }));
+    expect(out.session.fields.ageRange).toBe("1-2");
+    expect(out.session.step).toBe("hobby");
+
+    // hobby
+    out = await applyGuideTurn(out.session, { type: "text", text: "xe hơi" }, baseDeps({ guideChat: fail }));
+    expect(out.session.fields.hobby).toBe("cars");
+    expect(out.session.step).toBe("photo");
+    expect(out.messages.join("\n")).toMatch(/ảnh/i);
+  });
 });
