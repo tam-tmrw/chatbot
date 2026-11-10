@@ -190,9 +190,7 @@ function applyExtracted(session: Session, extracted: Extracted): boolean {
     }
   }
   if (
-    (extracted.gender === "boy" ||
-      extracted.gender === "girl" ||
-      extracted.gender === "unspecified") &&
+    (extracted.gender === "boy" || extracted.gender === "girl") &&
     mayOverwriteField(session, "gender")
   ) {
     session.fields.gender = extracted.gender;

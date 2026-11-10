@@ -106,7 +106,7 @@ export function gentleHint(step: Session["step"]): string {
     case "display_name":
       return "Tên trên video cần ngắn (tối đa 12 ký tự, không dấu cách). Ví dụ: Bin, MinhAnh, CuDat.";
     case "gender":
-      return "Ba mẹ chọn giúp mình số tương ứng với giới tính bé nhé.";
+      return "Ba mẹ chọn giúp mình: 1. Bé trai hoặc 2. Bé gái nhé.";
     case "age_range":
       return "Ba mẹ chọn giúp mình độ tuổi gần đúng của bé nhé.";
     case "hobby":
@@ -174,10 +174,9 @@ export function promptFor(session: Session): { text: string; buttons: Button[] }
       return surface(ch, lead, keep);
     }
     case "gender":
-      return surface(ch, "Bé là bé trai hay bé gái ạ? (Mình không đoán từ ảnh đâu nhé.)", [
+      return surface(ch, "Bé nhà mình là bé trai hay bé gái ạ?", [
         { id: "boy", label: withIcon("👦", "Bé trai") },
         { id: "girl", label: withIcon("👧", "Bé gái") },
-        { id: "unspecified", label: withIcon("❔", "Không nêu") },
       ]);
     case "age_range":
       return surface(ch, "Bé đang ở độ tuổi nào ạ? Chọn mức gần đúng giúp mình nhé.", [

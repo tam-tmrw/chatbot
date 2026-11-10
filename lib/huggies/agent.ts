@@ -249,7 +249,7 @@ function mergeGuideFields(
     const n = parseDisplayName(f.babyName.replace(/\s+/g, "").slice(0, 12));
     if (n) f.displayName = n;
   }
-  if (raw?.gender === "boy" || raw?.gender === "girl" || raw?.gender === "unspecified") {
+  if (raw?.gender === "boy" || raw?.gender === "girl") {
     f.gender = raw.gender;
   }
   if (

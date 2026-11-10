@@ -35,7 +35,7 @@ function cleanAssistantText(
     return "Trước khi bắt đầu, mình cần ba mẹ đồng ý Điều khoản sử dụng ảnh để tạo video.";
   }
   if (step === "gender") {
-    return "Bé là bé trai hay bé gái ạ? (Mình không đoán từ ảnh đâu nhé.)";
+    return "Bé nhà mình là bé trai hay bé gái ạ?";
   }
   if (step === "age_range") return "Bé đang ở độ tuổi nào ạ? Chọn mức gần đúng giúp mình nhé.";
   if (step === "hobby") return "Bé thích gì nhất? Chọn 1 sở thích để mình chọn kiểu video cho hợp nhé.";

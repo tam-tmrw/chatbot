@@ -96,7 +96,6 @@ export function parseDisplayName(raw: string): string | null {
 export function parseGenderToken(raw: string): Gender | null {
   if (raw.trim() === "1") return "boy";
   if (raw.trim() === "2") return "girl";
-  if (raw.trim() === "3") return "unspecified";
   return null;
 }
 
