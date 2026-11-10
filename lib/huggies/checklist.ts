@@ -52,11 +52,24 @@ export function guideReprompt(fields: Fields, termsUrl: string): string {
   return `😊 Không sao ạ, mình nhắc lại bước đang cần nhé:\n${firstMissingHint(fields, { termsUrl })}`;
 }
 
+export const HOBBY_ICONS: Record<string, string> = {
+  cars: "🚗",
+  animals: "🐾",
+  music: "🎵",
+  dance: "💃",
+  sports: "⚽",
+  princess: "👑",
+  space: "🚀",
+  art: "🎨",
+  toys: "🧸",
+  nature: "🌿",
+};
+
 function hobbyHint(): string {
-  const labels = HOBBIES.map((h) => h.label).join(", ");
+  const lines = HOBBIES.map((h) => `${HOBBY_ICONS[h.id] ?? "⭐"} ${h.label}`);
   return [
     "💫 Bé thích gì nhất ạ? Ba mẹ chọn giúp mình một sở thích để mình chọn kiểu video cho hợp nhé.",
-    `Gợi ý: ${labels}.`,
+    ...lines,
   ].join("\n");
 }
 
@@ -79,13 +92,12 @@ export const PHOTO_ASK =
   "📷 Thông tin đủ rồi ạ! Ba mẹ bấm nút camera bên dưới để gửi 1 ảnh mặt bé rõ, nhìn thẳng, đủ sáng nhé.";
 
 const HINTS: Record<Exclude<TextFieldKey, "consent" | "hobby">, string> = {
-  babyName:
-    "👶 Ba mẹ cho Huggies hỏi bé nhà mình tên gì ạ? Ví dụ: Bin, Minh Anh — trả lời tự nhiên giúp mình nhé.",
+  babyName: "👶 Ba mẹ cho Huggies hỏi bé nhà mình tên gì ạ? Ví dụ: Bin, Minh Anh.",
   displayName:
     "🏷️ Tên hiện trên video tối đa 12 ký tự và viết liền (không dấu cách). Ba mẹ muốn giữ tên bé, hay đặt biệt danh ngắn hơn? Ví dụ: Bin, MinhAnh — hoặc nói “giữ tên này”.",
   gender: "🚻 Bé nhà mình là bé trai, bé gái, hay ba mẹ muốn không nêu ạ?",
   ageRange:
-    "📅 Bé đang ở độ tuổi nào ạ? Ba mẹ chọn giúp mình: dưới 1 / 1–2 / 2–3 / trên 3 tuổi nhé.",
+    "📅 Bé đang ở độ tuổi nào ạ? Ba mẹ chọn giúp mình: dưới 1 / 1–2 / 2–3 / trên 3 tuổi (hoặc gõ 1.5, tuổi rưỡi…).",
 };
 
 export function missingTextKeys(fields: Fields): TextFieldKey[] {

@@ -127,7 +127,7 @@ export function promptFor(session: Session): { text: string; buttons: Button[] }
         return {
           text: [
             "👋 Xin chào ba mẹ! Mình là trợ lý Huggies cho chiến dịch tạo video nhảy đáng yêu cho bé.",
-            "📝 Ba mẹ chỉ cần trả lời tự nhiên vài câu (tên bé, giới tính, độ tuổi, sở thích), đồng ý điều khoản dùng ảnh, rồi gửi 1 ảnh mặt bé rõ — mình sẽ ghép thành video ngắn.",
+            "📝 Ba mẹ trả lời vài câu ngắn (tên bé, giới tính, độ tuổi, sở thích), đồng ý điều khoản dùng ảnh, rồi gửi 1 ảnh mặt bé rõ — mình sẽ ghép thành video ngắn.",
             "✨ Nhắn “bắt đầu” (hoặc “ok”) để xem điều khoản và bắt đầu nhé.",
           ].join("\n"),
           buttons: [],
@@ -236,9 +236,10 @@ export function promptFor(session: Session): { text: string; buttons: Button[] }
         buttons: [],
       };
     case "result":
+      // Video is delivered as an embedded attachment in the chat UI (Zalo/Messenger allow video).
       return surface(
         ch,
-        `🎉 Xong rồi ạ! Video của bé ${f.displayName ?? ""} đây. Ba mẹ bấm link bên dưới để xem, rồi chọn bước tiếp theo nhé.`,
+        `🎉 Xong rồi ạ! Video của bé ${f.displayName ?? ""} đây. Ba mẹ xem ngay bên dưới, rồi chọn bước tiếp theo nhé.`,
         [
           { id: "share", label: withIcon("📤", "Chia sẻ") },
           { id: "replay", label: withIcon("🔄", "Làm lại") },

@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 
 type Btn = { id: string; label: string };
-type Bubble = { role: "user" | "assistant"; text: string; imageUrl?: string; step?: string };
+type Bubble = {
+  role: "user" | "assistant";
+  text: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  step?: string;
+};
 type Job = { videoUrl?: string | null; previewUrl?: string | null };
 type DemoChannel = "zalo" | "messenger";
 type DemoMode = "flow" | "guide";
@@ -53,6 +59,19 @@ function chipClass(id: string): string {
   }
   if (id === "no" || id === "end") return "hg-chip hg-chip-muted";
   return "hg-chip";
+}
+
+function renderTextWithLinks(text: string) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((part, i) =>
+    /^https?:\/\//.test(part) ? (
+      <a key={i} href={part} target="_blank" rel="noopener noreferrer">
+        {part}
+      </a>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
+  );
 }
 
 export function HuggiesChat() {
@@ -140,7 +159,7 @@ export function HuggiesChat() {
       if (data.mode) setMode(data.mode === "guide" ? "guide" : "flow");
       setBubbles(
         (data.messages ?? []).map((line) => ({
-          role: "assistant",
+          role: "assistant" as const,
           text: line,
           step: data.step,
         })),
@@ -152,13 +171,18 @@ export function HuggiesChat() {
     setSessionId(data.sessionId);
     if (data.mode) setMode(data.mode === "guide" ? "guide" : "flow");
     if (data.step) setStep(data.step);
+    const resultVideo =
+      data.step === "result" ? (data.job?.videoUrl ?? undefined) : undefined;
+    const lines = data.messages ?? [];
     setBubbles((prev) => [
       ...prev,
       ...(user ? [user] : []),
-      ...(data.messages ?? []).map((line) => ({
+      ...lines.map((line, i) => ({
         role: "assistant" as const,
         text: line,
         step: data.step,
+        // Attach video on the last result line so it stays in-thread like Zalo/FB.
+        videoUrl: resultVideo && i === lines.length - 1 ? resultVideo : undefined,
       })),
     ]);
     setButtons(data.buttons ?? []);
@@ -174,16 +198,32 @@ export function HuggiesChat() {
       if (!res.ok) continue;
       const data = await res.json();
       if (sessionIdRef.current !== id) return;
+      const resultVideo =
+        data.step === "result" ? (data.job?.videoUrl as string | undefined) : undefined;
       if ((data.messages as string[] | undefined)?.length) {
+        const lines = data.messages as string[];
         setBubbles((prev) => [
           ...prev,
-          ...(data.messages as string[]).map((line) => ({
+          ...lines.map((line, idx) => ({
             role: "assistant" as const,
             text: line,
-            step: data.step,
+            step: data.step as string | undefined,
+            videoUrl: resultVideo && idx === lines.length - 1 ? resultVideo : undefined,
           })),
         ]);
         setButtons(data.buttons ?? []);
+      } else if (resultVideo) {
+        // Job ready but announce text already sent — still pin video in thread.
+        setBubbles((prev) => {
+          const next = [...prev];
+          for (let i = next.length - 1; i >= 0; i -= 1) {
+            if (next[i].role === "assistant") {
+              next[i] = { ...next[i], videoUrl: resultVideo, step: "result" };
+              break;
+            }
+          }
+          return next;
+        });
       }
       if (data.step) setStep(data.step);
       if (data.job) setJob(data.job);
@@ -244,7 +284,6 @@ export function HuggiesChat() {
   // Guide uses composer camera click like Flow/Zalo — dropzone only for Messenger mock.
   const showDropzone = step === "photo" && channel === "messenger";
   const guidePhotoLocked = step !== "photo";
-  const showMedia = step === "result" && !!(job?.previewUrl || job?.videoUrl);
   const modeShort = mode === "guide" ? "AI guide" : "Flow";
   const channelShort =
     channel === "zalo" ? "Demo Zalo · text/số" : "Demo Messenger · button";
@@ -295,7 +334,7 @@ export function HuggiesChat() {
             aria-label="Cấu hình demo"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2>Cấu hình pitch</h2>
+            <h2>Cấu hình demo</h2>
             <p className="hg-config-note">Đổi xong sẽ bắt đầu chat mới. Chỉ mô phỏng UI web.</p>
             <fieldset className="hg-fieldset">
               <legend>Kênh demo</legend>
@@ -381,8 +420,24 @@ export function HuggiesChat() {
                     ))}
                   </dl>
                 </>
-              ) : bubble.text || !bubble.imageUrl ? (
-                <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{textToShow}</p>
+              ) : bubble.text || (!bubble.imageUrl && !bubble.videoUrl) ? (
+                <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>
+                  {bubble.role === "assistant" ? renderTextWithLinks(textToShow) : textToShow}
+                </p>
+              ) : null}
+              {bubble.videoUrl ? (
+                <div className="hg-media-card hg-media-in-bubble">
+                  {job?.previewUrl && i === bubbles.length - 1 ? (
+                    <img alt="" src={job.previewUrl} />
+                  ) : null}
+                  <video
+                    controls
+                    src={bubble.videoUrl}
+                    playsInline
+                    preload="metadata"
+                    className="hg-result-video"
+                  />
+                </div>
               ) : null}
             </div>
           );
@@ -396,17 +451,18 @@ export function HuggiesChat() {
           </div>
         ) : null}
 
-        {showMedia ? (
-          <div className="hg-media-card">
-            {job?.previewUrl ? <img alt="" src={job.previewUrl} /> : null}
-            {job?.videoUrl ? <video controls src={job.videoUrl} playsInline /> : null}
-            {job?.videoUrl ? (
-              <p className="hg-video-link">
-                <a href={job.videoUrl} target="_blank" rel="noopener noreferrer">
-                  🎬 Xem / mở video
-                </a>
-              </p>
-            ) : null}
+        {step === "result" && job?.videoUrl && !bubbles.some((b) => b.videoUrl) ? (
+          <div className="bubble assistant">
+            <div className="hg-media-card hg-media-in-bubble">
+              {job.previewUrl ? <img alt="" src={job.previewUrl} /> : null}
+              <video
+                controls
+                src={job.videoUrl}
+                playsInline
+                preload="metadata"
+                className="hg-result-video"
+              />
+            </div>
           </div>
         ) : null}
 

@@ -315,6 +315,53 @@ describe("applyGuideTurn", () => {
     expect(msg).not.toMatch(/xác nhận/);
   });
 
+  it("parses natural age and hobby aliases without LLM", async () => {
+    const fail = vi.fn(async () => {
+      throw new Error("timeout");
+    });
+    let s = freshSession({ id: "g-age", mode: "guide", termsVersion: "t" });
+    s.fields = {
+      ...s.fields,
+      consent: true,
+      consentAt: "t",
+      babyName: "Bin",
+      displayName: "Bin",
+      gender: "girl",
+      ageRange: null,
+      hobby: null,
+    };
+    s.step = "age_range";
+    let out = await applyGuideTurn(s, { type: "text", text: "tuổi rưỡi" }, baseDeps({ guideChat: fail }));
+    expect(out.session.fields.ageRange).toBe("1-2");
+    out = await applyGuideTurn(
+      { ...out.session, fields: { ...out.session.fields, ageRange: null }, step: "age_range" },
+      { type: "text", text: "1.5" },
+      baseDeps({ guideChat: fail }),
+    );
+    expect(out.session.fields.ageRange).toBe("1-2");
+
+    s = freshSession({ id: "g-hobby", mode: "guide", termsVersion: "t" });
+    s.fields = {
+      ...s.fields,
+      consent: true,
+      consentAt: "t",
+      babyName: "Bin",
+      displayName: "Bin",
+      gender: "girl",
+      ageRange: "1-2",
+      hobby: null,
+    };
+    s.step = "hobby";
+    out = await applyGuideTurn(s, { type: "text", text: "chó" }, baseDeps({ guideChat: fail }));
+    expect(out.session.fields.hobby).toBe("animals");
+    out = await applyGuideTurn(
+      { ...out.session, fields: { ...out.session.fields, hobby: null }, step: "hobby" },
+      { type: "text", text: "cổ tích" },
+      baseDeps({ guideChat: fail }),
+    );
+    expect(out.session.fields.hobby).toBe("princess");
+  });
+
   it("keeps baby name when user says xài tên này luôn", async () => {
     const fail = vi.fn(async () => {
       throw new Error("timeout");

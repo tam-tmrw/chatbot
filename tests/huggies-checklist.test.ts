@@ -77,6 +77,22 @@ describe("huggies checklist", () => {
     f.consent = true;
     expect(firstMissingHint(f)).toMatch(/Huggies hỏi|tên/i);
     expect(firstMissingHint(f)).toMatch(/👶/);
+    expect(firstMissingHint(f)).not.toMatch(/trả lời tự nhiên/i);
+  });
+
+  it("hobby hint lists icons per hobby", () => {
+    const f = empty();
+    Object.assign(f, {
+      consent: true,
+      babyName: "Tủn",
+      displayName: "Tun",
+      gender: "boy",
+      ageRange: "1-2",
+    });
+    const hint = firstMissingHint(f);
+    expect(hint).toMatch(/🐾/);
+    expect(hint).toMatch(/Động vật/);
+    expect(hint).toMatch(/👑/);
   });
 
   it("hobby hint lists every HOBBIES label", () => {

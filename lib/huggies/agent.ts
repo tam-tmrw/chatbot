@@ -87,6 +87,39 @@ function syncGuideStep(session: Session): void {
   else session.step = "confirm";
 }
 
+const HOBBY_ALIASES: Record<HobbyId, string[]> = {
+  cars: ["xe", "xe hoi", "oto", "o to", "car", "cars"],
+  animals: ["dong vat", "cho", "meo", "ga", "thu", "cun", "cuni", "animal", "animals"],
+  music: ["am nhac", "nhac", "hat", "music"],
+  dance: ["nhay", "nhay mua", "dance"],
+  sports: ["the thao", "bong", "sport", "sports"],
+  princess: ["cong chua", "co tich", "princess", "co-tich"],
+  space: ["vu tru", "space", "phi thuyen"],
+  art: ["ve", "sang tao", "ve tranh", "art"],
+  toys: ["do choi", "toy", "toys"],
+  nature: ["thien nhien", "cay", "hoa", "nature"],
+};
+
+function matchHobby(foldedUser: string): HobbyId | null {
+  const t = foldedUser.trim();
+  if (!t) return null;
+  for (const h of HOBBIES) {
+    const label = foldVn(h.label);
+    if (t === h.id || t === label) return h.id;
+    if (t.length >= 3 && (label.includes(t) || t.includes(label))) return h.id;
+    const parts = label.split(/\s*\/\s*|\s+/).filter((p) => p.length >= 3);
+    if (parts.some((p) => t === p || (t.length >= 3 && (t.includes(p) || p.includes(t))))) {
+      return h.id;
+    }
+    const aliases = HOBBY_ALIASES[h.id] ?? [];
+    // Short aliases (cho/ga/ve) — exact or word-boundary only.
+    if (aliases.some((a) => t === a || (a.length >= 3 && (t.includes(a) || a.includes(t))))) {
+      return h.id;
+    }
+  }
+  return null;
+}
+
 /** Deterministic field fill from user text — Guide must work when LLM times out. */
 function applyGuideHeuristics(session: Session, userText: string): boolean {
   const f = session.fields;
@@ -146,10 +179,21 @@ function applyGuideHeuristics(session: Session, userText: string): boolean {
       changed = true;
     }
   } else if (!f.ageRange) {
-    const fromToken = parseAgeToken(userText);
-    if (fromToken) {
-      f.ageRange = fromToken;
+    // Natural ages first (1.5 / tuổi rưỡi / 18 tháng) — menu tokens 1–4 are fallback.
+    // Ranges before "N tuổi" so "1-2 tuổi" isn't read as trailing "2 tuổi" → 2–3.
+    const assignYears = (years: number) => {
+      if (years < 1) f.ageRange = "<1";
+      else if (years < 2) f.ageRange = "1-2";
+      else if (years < 3) f.ageRange = "2-3";
+      else f.ageRange = ">3";
       changed = true;
+    };
+    const decimalOnly = userText.trim().match(/^(\d+)[.,](\d+)$/);
+    const withTuoi =
+      t.match(/(?:^|[^0-9~\-])(\d+(?:[.,]\d+)?)\s*tuoi\b/) ??
+      t.match(/\btuoi\s*(\d+(?:[.,]\d+)?)\b/);
+    if (/\b(tuoi\s*ruoi|ruoi\s*tuoi|1\s*tuoi\s*ruoi|18\s*thang)\b/.test(t)) {
+      assignYears(1.5);
     } else if (/\b(duoi\s*1|so sinh|newborn)\b/.test(t) || t.includes("<1")) {
       f.ageRange = "<1";
       changed = true;
@@ -162,6 +206,16 @@ function applyGuideHeuristics(session: Session, userText: string): boolean {
     } else if (/\b(tren\s*3|hon\s*3)\b/.test(t) || t.includes(">3")) {
       f.ageRange = ">3";
       changed = true;
+    } else if (decimalOnly) {
+      assignYears(Number(`${decimalOnly[1]}.${decimalOnly[2]}`));
+    } else if (withTuoi) {
+      assignYears(Number(String(withTuoi[1]).replace(",", ".")));
+    } else {
+      const fromToken = parseAgeToken(userText);
+      if (fromToken) {
+        f.ageRange = fromToken;
+        changed = true;
+      }
     }
   } else if (!f.hobby) {
     const fromToken = parseHobbyToken(userText);
@@ -169,9 +223,9 @@ function applyGuideHeuristics(session: Session, userText: string): boolean {
       f.hobby = fromToken;
       changed = true;
     } else {
-      const hit = HOBBIES.find((h) => t.includes(foldVn(h.label)) || t.includes(h.id));
+      const hit = matchHobby(t);
       if (hit) {
-        f.hobby = hit.id;
+        f.hobby = hit;
         changed = true;
       }
     }

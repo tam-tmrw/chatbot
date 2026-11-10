@@ -101,6 +101,7 @@ export async function POST(req: Request) {
     messages: result.messages,
     buttons: result.buttons,
     jobId: result.jobId,
+    job: result.session.job ?? null,
     restart: false,
   });
 }
